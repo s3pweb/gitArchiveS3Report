@@ -1,10 +1,27 @@
-# Backup Cobra
+# Git Archive S3 Report
 
-Backup Cobra is a powerful tool designed to clone repositories, generate detailed reports in Excel format, zip repositories and upload zip files to Amazon S3. It helps you keep track of your repositories, developers' activities, and various project metrics.
+Git Archive S3 Report is a powerful tool designed to clone repositories, generate detailed reports in Excel format, zip repositories and upload zip files to Amazon S3. It helps you keep track of your repositories, developers' activities, and various project metrics.
+
+<!-- TOC -->
+
+- [Git Archive S3 Report](#git-archive-s3-report)
+    - [1. Description](#1-description)
+    - [2. Features](#2-features)
+    - [3. Installation](#3-installation)
+    - [4. Usage](#4-usage)
+        - [4.1. Clone Repositories](#41-clone-repositories)
+        - [4.2. Generate an Excel Report](#42-generate-an-excel-report)
+        - [4.3. Compress Directories](#43-compress-directories)
+        - [4.4. Upload to Amazon S3](#44-upload-to-amazon-s3)
+    - [5. Features](#5-features)
+    - [6. Project Structure](#6-project-structure)
+    - [7. Authors](#7-authors)
+
+<!-- /TOC -->
 
 ## Description
 
-Backup Cobra automates the process of cloning repositories, generate detailed reports in Excel format, zip repositories and upload zip files to Amazon S3. It supports Bitbucket repositories and provides insights into developer activities, commit histories, and project configurations.
+Git Archive S3 Report automates the process of cloning repositories, generate detailed reports in Excel format, zip repositories and upload zip files to Amazon S3. It supports Bitbucket repositories and provides insights into developer activities, commit histories, and project configurations.
 
 ## Features
 
@@ -15,46 +32,60 @@ Backup Cobra automates the process of cloning repositories, generate detailed re
 
 ## Installation
 
-1. Clone the repository :
-   ```bash
-   git clone https://github.com/yourusername/backup-cobra.git
-   cd backup-cobra
+1. Clone the repository
 
-2. Install Go : Make sure Go is installed. You can dowload it from the official Go website 
-   https://go.dev/doc/install
+```bash
+git clone git@github.com:s3pweb/gitArchiveS3Report.git
+cd gitArchiveS3Report
+```
 
-3. Install dependencies :
+2. Install Go _(You can download it from the official Go website https://go.dev/doc/install or using Brew for Mac users with `brew install go`)_
+
+3. Install dependencies
+
 - [ghorg](https://github.com/gabrie30/ghorg) (for cloning repositories)
-      `go install github.com/gabrie30/ghorg@latest`
 - [Excelize](https://github.com/xuri/excelize) (for generating Excel reports)
-      `go get -u github.com/xuri/excelize/v2`
 - [cobra](https://github.com/spf13/cobra)
-      `go get -u github.com/spf13/cobra@latest`
 
-4. Install project dependencies : From the project root, run : 
-   `go mod tidy`
+```bash
+go install github.com/gabrie30/ghorg@latest
+go get -u github.com/xuri/excelize/v2
+go get -u github.com/spf13/cobra@latest
+```
 
-5. Configure AWS and Bitbucket credentials :
+4. Install project dependencies
+
+From the project root `go mod tidy`
+
+5. Configure AWS and Bitbucket credentials
+
 To store sensitive information like API keys or credentials, you can use a `.secrets` file. An example file named `example.secrets` is provided in the project to help you get started.
-- Copy the `example.secrets` file and rename it to `.secrets`:
-   ```bash
-   cp example.secrets .secrets
+
+- Copy the `example.secrets` file and rename it to `.secrets`
+
+```bash
+cp example.secrets .secrets
+```
 
 - Fill it with the secrets required
 
-- For help to get the keys for aws amazon S3 you can use this documentation : `https://docs.aws.amazon.com/fr_fr/IAM/latest/UserGuide/id_credentials_access-keys.html`
+- For help to get the keys for AWS Amazon S3, you can use this documentation : https://docs.aws.amazon.com/fr_fr/IAM/latest/UserGuide/id_credentials_access-keys.html
 
-6. Configure your .config file :
-The `.config` file allows you to customize certain behaviors of the project. An exemple file name `example.config` is provided in the project to help you get started.
-- Copy the `example.config` file and rename it to `.config`:
-   ```bash
-   cp example.config .config
+6. Configure your .config file
 
-In this `.config` file you have some variables you can configurate :
+The `.config` file allows you to customize certain behaviors of the project. An example file name `example.config` is provided in the project to help you to get started.
+
+- Copy the `example.config` file and rename it to `.config`
+
+```bash
+cp example.config .config
+```
+
+In this `.config` file you have some variables you can configure :
 
 - **CPU** : you can choose the number of processors you want to use (by default 1).
 
-- **DEVELOPERS_MAP** : For developpers it will group some username, exemple : "DEVELOPERS_MAP=Jean D=Jean Dupont;"
+- **DEVELOPERS_MAP** : For developers it will group some username, example : "DEVELOPERS_MAP=Jean D=Jean Dupont;"
 
 - **DEFAULT_COLUMN** : The list of the default column that the program do
 
@@ -62,7 +93,7 @@ In this `.config` file you have some variables you can configurate :
 
 - **FILES_TO_SEARCH** : List of file you want to search for in a repository (handle regex)
 
-## Usage 
+## Usage
 
 ### Clone Repositories
 
@@ -110,4 +141,5 @@ In this `.config` file you have some variables you can configurate :
 
 ## Authors
 
-Main author : Louise Calvez
+- Main author : Louise Calvez
+- Doc reviewers : [@gigouni](https://github.com/gigouni/)
