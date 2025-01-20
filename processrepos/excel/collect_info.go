@@ -24,8 +24,10 @@ import (
 )
 
 func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.BranchInfo, path string) ([]structs.BranchInfo, error) {
-
 	var infos []structs.BranchInfo
+
+	isShallow := gitUtils.IsShallowClone(path)
+	cloneDepth := gitUtils.GetRepoDepth(path)
 
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -62,7 +64,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 	termsToSearch := config["TERMS_TO_SEARCH"]
 
 	for _, branchName := range branches {
-
 		logger.Info("Processing branch: %s in repository: %s", branchName, path)
 
 		if !strings.HasPrefix(branchName, "origin/") {
@@ -93,28 +94,54 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			return nil, err
 		}
 
+		// Variables pour stocker les informations du commit
+		var lastDeveloper string
+		var lastCommitDate time.Time
+		var commitNbr int
+		var lastDeveloperPercentage float64
+		var topDeveloper string
+		var topDeveloperPercentage float64
+
+		if isShallow {
+			// Pour un shallow clone, on prend uniquement le dernier commit
+			head, err := repo.Head()
+			if err != nil {
+				return nil, err
+			}
+			commit, err := repo.CommitObject(head.Hash())
+			if err != nil {
+				return nil, err
+			}
+
+			lastDeveloper = commit.Author.Name
+			if replacement, ok := replacements[lastDeveloper]; ok {
+				lastDeveloper = replacement
+			}
+			lastCommitDate = commit.Author.When
+			commitNbr = 1
+			lastDeveloperPercentage = 100
+			topDeveloper = lastDeveloper
+			topDeveloperPercentage = 100
+		} else {
+			// Utiliser les fonctions existantes pour un clone complet
+			lastDeveloper, lastCommitDate, err = getLastDeveloperExcludingUser(repo, "bitbucket-pipelines", replacements)
+			if err != nil {
+				return nil, err
+			}
+			commitNbr, err = countCommits(repo, "bitbucket-pipelines")
+			if err != nil {
+				return nil, err
+			}
+			topDeveloper, topDeveloperPercentage, err = getTopDeveloper(repo, "bitbucket-pipelines", replacements)
+			if err != nil {
+				return nil, err
+			}
+			lastDeveloperPercentage = calculateDeveloperPercentage(repo, lastDeveloper)
+		}
+
 		dockerComposeName := getDockerComposeFileName(path)
 		hostLine := getHostLine(path, dockerComposeName)
-
-		logger.Success("Checked files in branch: %s in repository done: %s", branchName, path)
-
-		logger.Success("Checked vault secret in branch: %s in repository done: %s", branchName, path)
-
-		lastDeveloper, lastCommitDate, _ := getLastDeveloperExcludingUser(repo, "bitbucket-pipelines", replacements)
-
 		timeSinceLastCommit := formatDuration(time.Since(lastCommitDate))
-		commitNbr, err := countCommits(repo, "bitbucket-pipelines")
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Printf("Commit count for branch %s: %d\n", branchName, commitNbr)
-		topDeveloper, topDeveloperPercentage, err := getTopDeveloper(repo, "bitbucket-pipelines", replacements)
-		if err != nil {
-			return nil, err
-		}
-
-		lastDeveloperPercentage := calculateDeveloperPercentage(repo, lastDeveloper)
 
 		filesToSearchMap := make(map[string]bool)
 		for _, file := range filesToSearch {
@@ -148,8 +175,9 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			FilesToSearch:           filesToSearchMap,
 			TermsToSearch:           termsToSearchMap,
 			Count:                   count,
+			IsShallow:               isShallow,
+			CloneDepth:              cloneDepth,
 		})
-
 	}
 	return infos, nil
 }

@@ -22,6 +22,47 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 	mainBranchesSheet := "Main Branches"
 	developBranchesSheet := "Develop Branches"
 
+	infoSheet := "Report Info"
+	f.NewSheet(infoSheet)
+
+	hasShallowClones := false
+	for _, branch := range allBranches {
+		if branch.IsShallow {
+			hasShallowClones = true
+			break
+		}
+	}
+
+	if hasShallowClones {
+		headerStyle, err := styles.CreateHeaderStyle(f)
+		if err != nil {
+			return err
+		}
+		cellStyle, err := styles.CreateCellStyle(f)
+		if err != nil {
+			return err
+		}
+
+		f.SetColWidth(infoSheet, "A", "B", 50)
+
+		f.SetCellValue(infoSheet, "A1", "Report Limitations")
+		f.SetCellStyle(infoSheet, "A1", "A1", headerStyle)
+
+		infoRows := []string{
+			"Some repositories in this report are shallow clones (depth=1)",
+			"For these repositories:",
+			"- Only the most recent commit is available",
+			"- Developer statistics are limited to the last commit",
+			"- Commit count shows only the available commits",
+		}
+
+		for i, text := range infoRows {
+			cell := fmt.Sprintf("A%d", i+2)
+			f.SetCellValue(infoSheet, cell, text)
+			f.SetCellStyle(infoSheet, cell, cell, cellStyle)
+		}
+	}
+
 	err := writeDataToSheet(f, allBranchesSheet, allBranches)
 	if err != nil {
 		return err
@@ -54,13 +95,12 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 	}
 
 	totalColumns := fixedColumns + maxFilesToSearch + maxTermsToSearch
-	// Create header style
+
 	headerStyle, err := styles.CreateHeaderStyle(f)
 	if err != nil {
 		return err
 	}
 
-	// Apply header style and set row height for each sheet
 	sheets := []string{allBranchesSheet, mainBranchesSheet, developBranchesSheet}
 	for _, sheet := range sheets {
 		f.SetCellStyle(sheet, "A1", fmt.Sprintf("%c1", 'A'+totalColumns-1), headerStyle)
@@ -72,7 +112,6 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 
 	return nil
 }
-
 func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.BranchInfo) error {
 
 	configColumns, err := getConfigColumn(".config")

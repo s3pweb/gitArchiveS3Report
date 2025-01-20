@@ -19,11 +19,30 @@ func Clonerepos(dirpath string, cfg *config.Config) error {
 		return err
 	}
 
-	cmd := exec.Command("ghorg", "clone", cfg.Bitbucket.Workspace,
+	// Construction de la commande de base
+	args := []string{
+		"clone",
+		cfg.Bitbucket.Workspace,
 		"--scm=bitbucket",
-		"--bitbucket-username="+cfg.Bitbucket.Username,
-		"--token="+cfg.Bitbucket.Token,
-		"--path="+dirpath)
+		"--bitbucket-username=" + cfg.Bitbucket.Username,
+		"--token=" + cfg.Bitbucket.Token,
+		"--path=" + dirpath,
+	}
+
+	// Ajout de l'option pour cloner uniquement la branche principale si demandé
+	if cfg.App.MainBranchOnly {
+		args = append(args, "--branch-filter=main,master")
+		args = append(args, "--bare=false")
+		logger.Info("Cloning only main/master branches")
+	}
+
+	// Ajout de l'option pour le shallow clone
+	if cfg.App.ShallowClone {
+		args = append(args, "--depth=1")
+		logger.Info("Performing shallow clone (depth=1)")
+	}
+
+	cmd := exec.Command("ghorg", args...)
 
 	// Get stdout pipe
 	stdout, err := cmd.StdoutPipe()

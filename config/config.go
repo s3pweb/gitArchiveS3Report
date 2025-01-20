@@ -44,6 +44,8 @@ type AppConfig struct {
 	TermsToSearch   []string
 	FilesToSearch   []string
 	DefaultCloneDir string
+	MainBranchOnly  bool
+	ShallowClone    bool
 }
 
 // Init initializes the configuration
@@ -96,6 +98,9 @@ func setDefaults() {
 		"(?i)Dockerfile$",
 		"(?i)docker-compose(-\\w+)?\\.yaml$",
 	})
+	viper.SetDefault("app.mainBranchOnly", false)
+	viper.SetDefault("app.shallowClone", false)
+
 }
 
 func mapEnvVariables() {
@@ -111,6 +116,7 @@ func mapEnvVariables() {
 		"LOG_LEVEL":             "logger.level",
 		"APP_CPU":               "app.cpu",
 		"APP_CLONE_DIR":         "app.defaultCloneDir",
+		"APP_MAIN_BRANCH_ONLY":  "app.mainBranchOnly",
 	}
 
 	for env, path := range envMappings {
