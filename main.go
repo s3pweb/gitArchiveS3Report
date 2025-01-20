@@ -1,19 +1,16 @@
 package main
 
 import (
+	"log"
+
 	"github.com/s3pweb/gitArchiveS3Report/cmd"
-	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
+	"github.com/s3pweb/gitArchiveS3Report/config"
 )
 
 func main() {
-
-	logger, err := logger.NewLogger("main", "trace")
-
-	if err != nil {
-		panic(err)
+	if err := config.Init(); err != nil {
+		log.Fatalf("Erreur d'initialisation de la configuration : %v", err)
 	}
-
-	logger.Info("Starting Backup-Cobra")
 
 	cmd.Execute()
 }

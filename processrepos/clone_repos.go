@@ -5,30 +5,24 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/s3pweb/gitArchiveS3Report/utils"
+	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 )
 
-func Clonerepos(dirpath string) error {
+func Clonerepos(dirpath string, cfg *config.Config) error {
 	if dirpath == "" {
 		dirpath = "./repositories/"
 	}
-	logger, err := logger.NewLogger("Clonerepos", "trace")
+
+	logger, err := logger.NewLogger("Clonerepos", cfg.Logger.Level)
 	if err != nil {
 		return err
 	}
-	secrets, err := utils.ReadConfigFile(".secrets")
-	if err != nil {
-		logger.Error("Error reading file: %v", err)
-	}
-	token := secrets["BITBUCKET_TOKEN"]
-	username := secrets["BITBUCKET_USERNAME"]
-	workspace := secrets["BITBUCKET_WORKSPACE"]
 
-	cmd := exec.Command("ghorg", "clone", workspace,
+	cmd := exec.Command("ghorg", "clone", cfg.Bitbucket.Workspace,
 		"--scm=bitbucket",
-		"--bitbucket-username="+username,
-		"--token="+token,
+		"--bitbucket-username="+cfg.Bitbucket.Username,
+		"--token="+cfg.Bitbucket.Token,
 		"--path="+dirpath)
 
 	// Get stdout pipe
@@ -46,19 +40,15 @@ func Clonerepos(dirpath string) error {
 
 	// Read command output in real-time
 	reader := bufio.NewReader(stdout)
-
 	for {
-		// Read each line as it's available
 		line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
 			logger.Error("error reading command output: %v", err)
 			return err
 		}
-		// If end of output
 		if err == io.EOF {
 			break
 		}
-		// Simply print the line
 		logger.Info("Output: %s", line)
 	}
 
@@ -67,5 +57,6 @@ func Clonerepos(dirpath string) error {
 		logger.Error("error waiting for command to finish: %v", err)
 		return err
 	}
+
 	return nil
 }
