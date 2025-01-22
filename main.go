@@ -8,8 +8,10 @@ import (
 )
 
 func main() {
+	// Initialize config but only enforce validation for commands that need it
 	if err := config.Init(); err != nil {
-		log.Fatalf("Erreur d'initialisation de la configuration : %v", err)
+		// Log the error but don't exit
+		log.Printf("Warning: Configuration error: %v", err)
 	}
 
 	cmd.Execute()

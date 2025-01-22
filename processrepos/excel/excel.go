@@ -9,6 +9,9 @@ import (
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
 )
 
+// ReportExcel generates an Excel report with the branch information
+// and saves it in the specified directory path
+// If no directory path is specified, the report will be saved in ./repositories/ (-d, --dir-path)
 func ReportExcel(basePath string) error {
 	logger, err := logger.NewLogger("ReportExcel", "trace")
 	if err != nil {

@@ -11,7 +11,9 @@ import (
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload repositories to amazon s3",
-	Args:  cobra.MinimumNArgs(0),
+	Long: `Upload repositories to amazon s3.
+			You can specify the directory path where the repositories will be uploaded.`,
+	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Uploading file from path: %s\n", dirpath)
 		err := processrepos.Upload(dirpath)

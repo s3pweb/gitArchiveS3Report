@@ -11,7 +11,13 @@ import (
 var reportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "Generate an Excel report",
-	Args:  cobra.MinimumNArgs(0),
+	Long: `Generate an Excel report with the following information:
+			- Branches
+			- Main branches
+			- Develop branches
+			- Files and terms to search in each branch
+			You can specify the directory path where the repositories are cloned (-d, --dir-path).`,
+	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		err := excel.ReportExcel(dirpath)
 		if err != nil {
