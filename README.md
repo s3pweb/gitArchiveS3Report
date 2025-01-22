@@ -5,120 +5,102 @@ Tool to backup and analyze Bitbucket repositories. Features include cloning repo
 ## Installation
 
 ### 1. Prerequisites
-- Go 1.22 or higher
+- Go 1.22 or higher (https://golang.org/dl/)
 - A Bitbucket account with API access
 - AWS credentials (if using S3 upload feature)
 
-### 2. Get the code
+### 2. Install dependencies
+
+### Installation Steps
+
+1. Clone and build the project:
 ```bash
+# Get the code
 git clone https://github.com/s3pweb/gitArchiveS3Report.git
 cd gitArchiveS3Report
+
+# Install dependencies and build
+go mod tidy
+go build -o git-archive-s3
 ```
 
-### 3. Install dependencies
-
-#### Linux Installation
+2. Install ghorg:
 ```bash
-# Install ghorg (required for cloning repositories)
 go install github.com/gabrie30/ghorg@v1.8.4
 
-# Install project libraries
-go mod tidy
+# Verify ghorg installation
+which ghorg
 ```
 
-#### macOS Installation
+### Configuration
+
+1. Create configuration files:
 ```bash
-# Option 1: Install via Go (recommended)
-go install github.com/gabrie30/ghorg@v1.8.4
-# Add Go bin to your PATH if not already done
-echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.zshrc  # For zsh
-# OR
-echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bash_profile  # For bash
-source ~/.zshrc  # Or source ~/.bash_profile for bash
-
-# Option 2: Install via Homebrew (alternative)
-brew install ghorg
-
-# Install project libraries
-go mod tidy
+# Copy example files
+cp example.secrets .secrets
+cp example.config .config
 ```
 
-Note: Why two different installation commands?
-- `go install` is used for ghorg because it's an external executable tool that our application calls as a separate process.
-  You can see this in `clone_repos.go` where we use `exec.Command("ghorg", ...)` to run it.
-- `go mod tidy` installs library dependencies (like cobra, excelize) that are imported and used directly in our code,
-  as defined in `go.mod`.
-
-### 4. Configure the tool
-
-Create configuration files:
+2. Edit `.secrets` file:
 ```bash
-# Create secrets file
-cat > .secrets << EOF
-# For backupcobra
-BITBUCKET_TOKEN=your_token
-BITBUCKET_USERNAME=your_username
-BITBUCKET_WORKSPACE=your_workspace
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-AWS_REGION=your_aws_region
-AWS_BUCKET_NAME=your_bucket_name
-UPLOAD_KEY=your_upload_prefix
+export BITBUCKET_TOKEN=your_token
+export BITBUCKET_USERNAME=your_username
+export BITBUCKET_WORKSPACE=your_workspace
 
-# For ghorg directly (required if using brew install on macOS)
-GHORG_BITBUCKET_USERNAME=your_username
-GHORG_BITBUCKET_TOKEN=your_token
-EOF
 
-# Source the secrets file to set environment variables
-source .secrets
+# Optional: For S3 upload feature
+export AWS_ACCESS_KEY_ID=your_aws_key
+export AWS_SECRET_ACCESS_KEY=your_aws_secret
+export AWS_REGION=your_aws_region
+export AWS_BUCKET_NAME=your_bucket_name
+export UPLOAD_KEY=your_upload_prefix
+```
 
-# Create config file
-cat > .config << EOF
+3. Edit `.config` file:
+```bash
 CPU=1
 DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage
 TERMS_TO_SEARCH=vaumt;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\\w+)?\\.yaml$
 LOG_LEVEL=info
-EOF
 ```
 
-### 5. Build the tool
+4. Load the secrets:
 ```bash
-go build -o backupcobra
+source .secrets
 ```
 
-## Basic Usage
+Modify these values according to your needs.
 
-### Display available commands
+## Usage
+
+### Display Available Commands
 ```bash
-./backupcobra
+./git-archive-s3
 ```
 
-## Command Details
-
-### Clone Options
+### Clone Repositories
 ```bash
-./backupcobra clone [flags]
+./git-archive-s3 clone [flags]
   -d, --dir-path string   Directory for cloned repositories (default: ./repositories)
   -m, --main-only        Clone only main/master branches
   -s, --shallow          Perform shallow clone (latest commit only)
 ```
 
-### Report Options
+### Generate Report
 ```bash
-./backupcobra report [flags]
+./git-archive-s3 report [flags]
   -p, --dir-path string   Path to repositories directory
 ```
 
-### Zip Options
+### Create ZIP Archives
 ```bash
-./backupcobra zip [flags]
+./git-archive-s3 zip [flags]
   -p, --dir-path string   Path to repositories directory
 ```
 
-### Upload Options
+### Upload to S3
 ```bash
-./backupcobra upload [flags]
-  -p, --dir-path string   Path to directory to upload (required)
+./git-archive-s3 upload [flags]
+  -p, --dir-path string   Path to directory to upload
 ```

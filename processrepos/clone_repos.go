@@ -2,6 +2,7 @@ package processrepos
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os/exec"
 
@@ -16,112 +17,80 @@ import (
 // If the shallow clone option is enabled, a shallow clone will be performed (-s, --shallow)
 // with only the latest commit
 func CloneRepos(dirpath string, cfg *config.Config) error {
-	if dirpath == "" {
-		dirpath = "./repositories/"
-	}
-
-	logger, err := logger.NewLogger("Clonerepos", cfg.Logger.Level)
+	logger, err := logger.NewLogger("Clonerepos", "debug")
 	if err != nil {
 		return err
 	}
 
-	// Build ghorg clone command
-	args := []string{
-		"clone",
-		cfg.Bitbucket.Workspace,
+	if dirpath == "" {
+		dirpath = "./repositories/"
+	}
+
+	// Construire la commande
+	cmd := exec.Command("ghorg", "clone", cfg.Bitbucket.Workspace,
 		"--scm=bitbucket",
-		"--bitbucket-username=" + cfg.Bitbucket.Username,
-		"--token=" + cfg.Bitbucket.Token,
-		"--path=" + dirpath,
-	}
-
-	// if main branch only option is enabled, add the branch option
-	if cfg.App.MainBranchOnly {
-		args = append(args, "--branch=main")
-	}
-
-	// if shallow clone option is enabled, add the clone-depth option
-	if cfg.App.ShallowClone {
-		args = append(args, "--clone-depth=1")
-		logger.Info("Performing shallow clone (depth=1)")
-	}
-
-	cmd := exec.Command("ghorg", args...)
+		"--bitbucket-username="+cfg.Bitbucket.Username,
+		"--token="+cfg.Bitbucket.Token,
+		"--path="+dirpath)
 
 	// Get stdout pipe
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		logger.Error("error getting stdout pipe: %v", err)
-		return err
+		return fmt.Errorf("error getting stdout pipe: %v", err)
+	}
+
+	// Get stderr pipe
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		logger.Error("error getting stderr pipe: %v", err)
+		return fmt.Errorf("error getting stderr pipe: %v", err)
 	}
 
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		logger.Error("error starting command: %v", err)
-		return err
+		return fmt.Errorf("error starting command: %v", err)
 	}
 
 	// Read command output in real-time
-	reader := bufio.NewReader(stdout)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && err != io.EOF {
-			logger.Error("error reading command output: %v", err)
-			return err
+	go func() {
+		reader := bufio.NewReader(stdout)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				logger.Error("error reading stdout: %v", err)
+				return
+			}
+			if err == io.EOF {
+				break
+			}
+			logger.Info("stdout: %s", line)
 		}
-		if err == io.EOF {
-			break
+	}()
+
+	// Read stderr in real-time
+	go func() {
+		reader := bufio.NewReader(stderr)
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				logger.Error("error reading stderr: %v", err)
+				return
+			}
+			if err == io.EOF {
+				break
+			}
+			logger.Error("stderr: %s", line)
 		}
-		logger.Info("Output: %s", line)
-	}
+	}()
 
 	// Wait for the command to finish
 	if err := cmd.Wait(); err != nil {
-		// Si la commande échoue avec main, essayer avec master
-		if cfg.App.MainBranchOnly {
-			logger.Info("Failed with 'main' branch, trying 'master'...")
-			// Remplacer main par master dans les arguments
-			for i, arg := range args {
-				if arg == "--branch=main" {
-					args[i] = "--branch=master"
-					break
-				}
-			}
-
-			cmd = exec.Command("ghorg", args...)
-			stdout, err = cmd.StdoutPipe()
-			if err != nil {
-				logger.Error("error getting stdout pipe for master: %v", err)
-				return err
-			}
-
-			if err := cmd.Start(); err != nil {
-				logger.Error("error starting command for master: %v", err)
-				return err
-			}
-
-			reader = bufio.NewReader(stdout)
-			for {
-				line, err := reader.ReadString('\n')
-				if err != nil && err != io.EOF {
-					logger.Error("error reading command output for master: %v", err)
-					return err
-				}
-				if err == io.EOF {
-					break
-				}
-				logger.Info("Output: %s", line)
-			}
-
-			if err := cmd.Wait(); err != nil {
-				logger.Error("error during master clone: %v", err)
-				return err
-			}
-		} else {
-			logger.Error("error during clone: %v", err)
-			return err
-		}
+		logger.Error("error during clone: %v", err)
+		return fmt.Errorf("error during clone: %v", err)
 	}
 
+	logger.Success("Clone completed successfully")
 	return nil
 }
