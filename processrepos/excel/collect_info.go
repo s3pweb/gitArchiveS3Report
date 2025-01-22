@@ -23,9 +23,45 @@ import (
 	"github.com/alitto/pond"
 )
 
+// CollectBranchInfoForOneRepo collects information about branches in a given Git repository.
+//
+// Parameters:
+//   - logger: A pointer to a logger.Logger instance for logging messages.
+//   - branchesInfo: A slice of structs.BranchInfo to store information about branches.
+//   - path: The file path to the Git repository.
+//
+// Returns:
+//   - A slice of structs.BranchInfo containing information about each branch.
+//   - An error if any issues occur during the process.
+//
+// The function performs the following steps:
+//  1. Checks if the repository is a shallow clone and retrieves the clone depth.
+//  2. Opens the Git repository located at the specified path.
+//  3. Retrieves the list of branches in the repository.
+//  4. Reads configuration and name replacement information from a ".config" file.
+//  5. Iterates over each branch and checks out the branch.
+//  6. Collects information about the last commit, the number of commits, and the top developer for each branch.
+//  7. Searches for specified files and terms in the repository.
+//  8. Appends the collected information to the branchesInfo slice.
+//
+// The collected information includes:
+//   - Repository name
+//   - Branch name
+//   - Last commit date
+//   - Time since the last commit
+//   - Number of commits
+//   - Host line from the Docker Compose file
+//   - Last developer and their contribution percentage
+//   - Top developer and their contribution percentage
+//   - Presence of specified files and terms
+//   - Count of found items
+//   - Whether the repository is a shallow clone
+//   - Clone depth
 func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.BranchInfo, path string) ([]structs.BranchInfo, error) {
-
 	var infos []structs.BranchInfo
+
+	isShallow := gitUtils.IsShallowClone(path)
+	cloneDepth := gitUtils.GetRepoDepth(path)
 
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -62,7 +98,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 	termsToSearch := config["TERMS_TO_SEARCH"]
 
 	for _, branchName := range branches {
-
 		logger.Info("Processing branch: %s in repository: %s", branchName, path)
 
 		if !strings.HasPrefix(branchName, "origin/") {
@@ -93,28 +128,53 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			return nil, err
 		}
 
+		var lastDeveloper string
+		var lastCommitDate time.Time
+		var commitNbr int
+		var lastDeveloperPercentage float64
+		var topDeveloper string
+		var topDeveloperPercentage float64
+
+		if isShallow {
+			// For shallow clones, only the last commit information is available
+			head, err := repo.Head()
+			if err != nil {
+				return nil, err
+			}
+			commit, err := repo.CommitObject(head.Hash())
+			if err != nil {
+				return nil, err
+			}
+
+			lastDeveloper = commit.Author.Name
+			if replacement, ok := replacements[lastDeveloper]; ok {
+				lastDeveloper = replacement
+			}
+			lastCommitDate = commit.Author.When
+			commitNbr = 1
+			lastDeveloperPercentage = 100
+			topDeveloper = lastDeveloper
+			topDeveloperPercentage = 100
+		} else {
+			// For full clones, collect more detailed information
+			lastDeveloper, lastCommitDate, err = getLastDeveloperExcludingUser(repo, "bitbucket-pipelines", replacements)
+			if err != nil {
+				return nil, err
+			}
+			commitNbr, err = countCommits(repo, "bitbucket-pipelines")
+			if err != nil {
+				return nil, err
+			}
+			topDeveloper, topDeveloperPercentage, err = getTopDeveloper(repo, "bitbucket-pipelines", replacements)
+			if err != nil {
+				return nil, err
+			}
+			lastDeveloperPercentage = calculateDeveloperPercentage(repo, lastDeveloper)
+		}
+
 		dockerComposeName := getDockerComposeFileName(path)
 		hostLine := getHostLine(path, dockerComposeName)
-
-		logger.Success("Checked files in branch: %s in repository done: %s", branchName, path)
-
-		logger.Success("Checked vault secret in branch: %s in repository done: %s", branchName, path)
-
-		lastDeveloper, lastCommitDate, _ := getLastDeveloperExcludingUser(repo, "bitbucket-pipelines", replacements)
-
 		timeSinceLastCommit := formatDuration(time.Since(lastCommitDate))
-		commitNbr, err := countCommits(repo, "bitbucket-pipelines")
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Printf("Commit count for branch %s: %d\n", branchName, commitNbr)
-		topDeveloper, topDeveloperPercentage, err := getTopDeveloper(repo, "bitbucket-pipelines", replacements)
-		if err != nil {
-			return nil, err
-		}
-
-		lastDeveloperPercentage := calculateDeveloperPercentage(repo, lastDeveloper)
 
 		filesToSearchMap := make(map[string]bool)
 		for _, file := range filesToSearch {
@@ -148,19 +208,29 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			FilesToSearch:           filesToSearchMap,
 			TermsToSearch:           termsToSearchMap,
 			Count:                   count,
+			IsShallow:               isShallow,
+			CloneDepth:              cloneDepth,
 		})
-
 	}
 	return infos, nil
 }
 
+// CollectBranchInfo collects branch information from git repositories located in the specified base path.
+// It uses a thread pool to process multiple repositories concurrently.
+//
+// Parameters:
+//   - basePath: The base directory path where the git repositories are located.
+//   - logger: A logger instance for logging information, trace, and errors.
+//
+// Returns:
+//   - A slice of BranchInfo structs containing information about the branches in the repositories.
+//   - An error if there is an issue reading the directories or processing the repositories.
 func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.BranchInfo, error) {
 	var branchesInfo []structs.BranchInfo
 
-	nbThreads := GetCPU(".config") //runtime.NumCPU() / 2
+	nbThreads := GetCPU(".config")
 
 	logger.Info("Number of threads: %d", nbThreads)
-	//time.Sleep(2 * time.Second)
 
 	var mutex sync.Mutex
 	pool := pond.New(nbThreads, 0, pond.MinWorkers(nbThreads))
@@ -181,7 +251,7 @@ func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.Branch
 				infos, err := CollectBranchInfoForOneRepo(logger, branchesInfo, path)
 
 				if err != nil {
-					//logger.Error("Error processing repository: %s [%s], continue ...", path, err)
+					logger.Error("Error processing repository: %s [%s], continue ...", path, err)
 					return
 				}
 
@@ -275,6 +345,7 @@ func getTopDeveloper(repo *git.Repository, excludeUser string, replacements map[
 	return topDeveloper, percentage, nil
 }
 
+// calculateDeveloperPercentage calculates the percentage of commits made by a specific developer
 func calculateDeveloperPercentage(repo *git.Repository, developer string) float64 {
 	commitIter, err := repo.Log(&git.LogOptions{})
 	if err != nil {

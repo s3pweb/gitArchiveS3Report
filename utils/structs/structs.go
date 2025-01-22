@@ -18,4 +18,6 @@ type BranchInfo struct {
 	FilesToSearch           map[string]bool
 	TermsToSearch           map[string]bool
 	Count                   string
+	IsShallow               bool
+	CloneDepth              int
 }
