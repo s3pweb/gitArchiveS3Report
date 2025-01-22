@@ -90,17 +90,17 @@ Modify these values according to your needs.
 ### Generate Report
 ```bash
 ./git-archive-s3 report [flags]
-  -p, --dir-path string   Path to repositories directory
+  -d, --dir-path string   Path to repositories directory
 ```
 
 ### Create ZIP Archives
 ```bash
 ./git-archive-s3 zip [flags]
-  -p, --dir-path string   Path to repositories directory
+  -d, --dir-path string   Path to repositories directory
 ```
 
 ### Upload to S3
 ```bash
 ./git-archive-s3 upload [flags]
-  -p, --dir-path string   Path to directory to upload
+  -d, --dir-path string   Path to directory to upload
 ```

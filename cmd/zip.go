@@ -23,6 +23,6 @@ var zipCmd = &cobra.Command{
 }
 
 func init() {
-	zipCmd.Flags().StringVarP(&path, "dir-path", "p", "", "Folder path to zip")
+	zipCmd.Flags().StringVarP(&path, "dir-path", "d", "", "Folder path to zip")
 	rootCmd.AddCommand(zipCmd)
 }
