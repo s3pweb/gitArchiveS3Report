@@ -24,7 +24,7 @@ func CreateExcelFile(Branches []structs.BranchInfo) (*excelize.File, error) {
 	// Set active sheet
 	f.SetActiveSheet(index)
 
-	fixedColumns := countFixedColumns(".config")
+	fixedColumns := countFixedColumns()
 	maxFilesToSearch := 0
 	maxTermsToSearch := 0
 

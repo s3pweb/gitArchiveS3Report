@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/s3pweb/gitArchiveS3Report/config"
 	gitUtils "github.com/s3pweb/gitArchiveS3Report/utils/git"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
@@ -82,23 +83,18 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 
 	localBranches := make(map[string]bool)
 
-	replacements, err := ReadNameReplacement(".config")
-	if err != nil {
-		logger.Error("Error reading .config file: %v", err)
-		return nil, err
+	cfg := config.Get()
+	replacements := make(map[string]string)
+	if cfg.App.DevelopersMap != "" {
+		for _, mapping := range strings.Split(cfg.App.DevelopersMap, ";") {
+			parts := strings.Split(mapping, "=")
+			if len(parts) == 2 {
+				replacements[strings.TrimSpace(parts[1])] = strings.TrimSpace(parts[0])
+			}
+		}
 	}
-
-	config, err := ReadConfig(".config")
-	if err != nil {
-		logger.Error("Error reading .config file: %v", err)
-		return nil, err
-	}
-
-	filesToSearch := config["FILES_TO_SEARCH"]
-	termsToSearch := config["TERMS_TO_SEARCH"]
 
 	for _, branchName := range branches {
-		logger.Info("Processing branch: %s in repository: %s", branchName, path)
 
 		if !strings.HasPrefix(branchName, "origin/") {
 			localBranches[branchName] = true
@@ -121,8 +117,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			})
 		}
 
-		logger.Success("Checked out branch: %s in repository done : %s", branchName, path)
-
 		if err != nil {
 			logger.Error("Failed to checkout branch: %s in repository: %s [%s]", branchName, path, err)
 			return nil, err
@@ -136,7 +130,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 		var topDeveloperPercentage float64
 
 		if isShallow {
-			// For shallow clones, only the last commit information is available
 			head, err := repo.Head()
 			if err != nil {
 				return nil, err
@@ -156,7 +149,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			topDeveloper = lastDeveloper
 			topDeveloperPercentage = 100
 		} else {
-			// For full clones, collect more detailed information
 			lastDeveloper, lastCommitDate, err = getLastDeveloperExcludingUser(repo, "bitbucket-pipelines", replacements)
 			if err != nil {
 				return nil, err
@@ -177,12 +169,12 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 		timeSinceLastCommit := formatDuration(time.Since(lastCommitDate))
 
 		filesToSearchMap := make(map[string]bool)
-		for _, file := range filesToSearch {
+		for _, file := range cfg.App.FilesToSearch {
 			filesToSearchMap[file] = fileExistsIgnoreCase(path, file)
 		}
 
 		termsToSearchMap := make(map[string]bool)
-		for _, term := range termsToSearch {
+		for _, term := range cfg.App.TermsToSearch {
 			termsToSearchMap[term] = searchInFiles(path, term)
 		}
 
@@ -191,8 +183,6 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 		totalSearchItems := len(filesToSearchMap) + len(termsToSearchMap)
 		trueCount := trueCountFiles + trueCountTerms
 		count := fmt.Sprintf("%d/%d", trueCount, totalSearchItems)
-
-		logger.Success("Checked developers info in branch: %s in repository done: %s", branchName, path)
 
 		infos = append(infos, structs.BranchInfo{
 			RepoName:                filepath.Base(path),
@@ -226,9 +216,13 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 //   - A slice of BranchInfo structs containing information about the branches in the repositories.
 //   - An error if there is an issue reading the directories or processing the repositories.
 func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.BranchInfo, error) {
+	cfg := config.Get()
 	var branchesInfo []structs.BranchInfo
 
-	nbThreads := GetCPU(".config")
+	nbThreads := cfg.App.CPU
+	if nbThreads <= 0 {
+		nbThreads = 1
+	}
 
 	logger.Info("Number of threads: %d", nbThreads)
 
@@ -243,7 +237,6 @@ func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.Branch
 
 	for _, oneFolder := range folders {
 		path := basePath + "/" + oneFolder.Name()
-		logger.Trace("Processing entry: %s", path)
 
 		if oneFolder.IsDir() && isGitRepo(path) {
 
@@ -254,9 +247,6 @@ func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.Branch
 					logger.Error("Error processing repository: %s [%s], continue ...", path, err)
 					return
 				}
-
-				logger.Success("Processed repository: %s", path)
-				logger.Info("Branch info: %v", infos)
 
 				mutex.Lock()
 				branchesInfo = append(branchesInfo, infos...)
@@ -564,36 +554,15 @@ func getDockerComposeFileName(dirPath string) string {
 	return filepath.Base(files[0])
 }
 
-// ReadNameReplacement reads the .config file and extracts name replacements from the DEVELOPERS_MAP line
-func ReadNameReplacement(filePath string) (map[string]string, error) {
+// getDevelopersMap reads the .config file and extracts name replacements from the DEVELOPERS_MAP line
+func getDevelopersMap(cfg *config.Config) map[string]string {
 	replacements := make(map[string]string)
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var developersMapLine string
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "DEVELOPERS_MAP=") {
-			developersMapLine = strings.TrimPrefix(line, "DEVELOPERS_MAP=")
-			break
-		}
+	if cfg.App.DevelopersMap == "" {
+		return replacements
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	if developersMapLine == "" {
-		return nil, nil // No DEVELOPERS_MAP line found
-	}
-
-	// Parse the name replacements
-	replacementsList := strings.Split(developersMapLine, ";")
+	// Parse la string des développeurs (format: "dev1=John Doe;dev2=Jane Smith")
+	replacementsList := strings.Split(cfg.App.DevelopersMap, ";")
 	for _, replacement := range replacementsList {
 		parts := strings.Split(replacement, "=")
 		if len(parts) == 2 {
@@ -601,7 +570,7 @@ func ReadNameReplacement(filePath string) (map[string]string, error) {
 		}
 	}
 
-	return replacements, nil
+	return replacements
 }
 
 // GetCPU reads the .config file and extracts the number of threads to use

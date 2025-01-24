@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
 )
@@ -12,18 +13,14 @@ import (
 // ReportExcel generates an Excel report with the branch information
 // and saves it in the specified directory path
 // If no directory path is specified, the report will be saved in ./repositories/ (-d, --dir-path)
-func ReportExcel(basePath string) error {
+func ReportExcel(basePath string, cfg *config.Config) error {
 	logger, err := logger.NewLogger("ReportExcel", "trace")
 	if err != nil {
 		panic(err)
 	}
+
 	if basePath == "" {
-		workspace, err := ReadWorkspaceName(".secrets")
-		if err != nil {
-			logger.Error("Error reading workspace name from .secrets file: %v", err)
-			return err
-		}
-		basePath = "./repositories/" + workspace + "/"
+		basePath = "./repositories/" + cfg.Bitbucket.Workspace + "/"
 	}
 
 	branchesInfo, err := CollectBranchInfo(basePath, logger)
@@ -38,14 +35,15 @@ func ReportExcel(basePath string) error {
 
 	var mainBranches, developBranches []structs.BranchInfo
 	for _, branch := range branchesInfo {
-		if branch.BranchName == "main" || branch.BranchName == "origin/main" || branch.BranchName == "master" || branch.BranchName == "origin/master" {
+		if branch.BranchName == "main" || branch.BranchName == "origin/main" ||
+			branch.BranchName == "master" || branch.BranchName == "origin/master" {
 			mainBranches = append(mainBranches, branch)
 		} else if branch.BranchName == "develop" || branch.BranchName == "origin/develop" {
 			developBranches = append(developBranches, branch)
 		}
 	}
 
-	err = WriteBranchInfoToExcel(excelFile, branchesInfo, mainBranches, developBranches)
+	err = WriteBranchInfoToExcel(excelFile, branchesInfo, mainBranches, developBranches, cfg.App.DevSheets)
 	if err != nil {
 		return err
 	}
