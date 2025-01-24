@@ -99,27 +99,28 @@ CLONE_DIR=./repositories
 ### Clone Repositories
 ```bash
 ./git-archive-s3 clone [flags]
-  -d, --dir-path string   Directory for cloned repositories (default: ./repositories)
-  -m, --main-only        Clone only main/master/develop branches
-  -s, --shallow          Perform shallow clone (latest commit only)
+  -p, --dir-path string   Directory for cloned repositories (default: ./repositories)
+  -m, --main-only         Clone only main/master/develop branches
+  -s, --shallow           Perform shallow clone (latest commit only)
 ```
 
 ### Generate Report
 ```bash
 ./git-archive-s3 report [flags]
-  -d, --dir-path string   Path to repositories directory
+  -p, --dir-path string   Path to repositories directory
+  -d, --dev-sheets        Generate developer-specific sheets
 ```
 
 ### Create ZIP Archives
 ```bash
 ./git-archive-s3 zip [flags]
-  -d, --dir-path string   Path to repositories directory
+  -p, --dir-path string   Path to repositories directory (required)
 ```
 
 ### Upload to S3
 ```bash
 ./git-archive-s3 upload [flags]
-  -d, --dir-path string   Path to directory to upload
+  -p, --dir-path string   Path to directory to upload (required)
 ```
 
 ## Notes
