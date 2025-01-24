@@ -9,7 +9,8 @@ Tool to backup and analyze Bitbucket repositories. Features include cloning repo
 - A Bitbucket account with API access
 - AWS credentials (if using S3 upload feature)
 
-### 2. Install dependencies
+### 1.1 Generate Bitbucket Token
+![alt text](resources/image.png)
 
 ### Installation Steps
 
@@ -34,43 +35,59 @@ which ghorg
 
 ### Configuration
 
-1. Create configuration files:
+1. Create and configure the `.env` file:
 ```bash
-# Copy example files
-cp example.secrets .secrets
-cp example.config .config
+# Copy example file
+cp example.env .env
 ```
 
-2. Edit `.secrets` file:
+2. Edit the `.env` file with your settings:
 ```bash
-export BITBUCKET_TOKEN=your_token
-export BITBUCKET_USERNAME=your_username
-export BITBUCKET_WORKSPACE=your_workspace
+# Bitbucket Configuration
+BITBUCKET_TOKEN=your_token
+BITBUCKET_USERNAME=your_username
+BITBUCKET_WORKSPACE=your_workspace
 
+# AWS Configuration (Optional: For S3 upload feature)
+AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+AWS_REGION=your_aws_region
+AWS_BUCKET_NAME=your_bucket_name
+AWS_UPLOAD_KEY=your_upload_prefix
 
-# Optional: For S3 upload feature
-export AWS_ACCESS_KEY_ID=your_aws_key
-export AWS_SECRET_ACCESS_KEY=your_aws_secret
-export AWS_REGION=your_aws_region
-export AWS_BUCKET_NAME=your_bucket_name
-export UPLOAD_KEY=your_upload_prefix
-```
+# Logger Configuration
+LOG_LEVEL=debug
 
-3. Edit `.config` file:
-```bash
+# Application Configuration
+# The number of CPU cores to use for cloning repositories
 CPU=1
+
+# Developer name mappings (optional)
+# Format: alias1=Real Name 1;alias2=Real Name 2
+DEVELOPERS_MAP=john=John Doe;jane=Jane Smith
+
+# Default columns for the Excel report
 DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage
-TERMS_TO_SEARCH=vaumt;swagger
-FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\\w+)?\\.yaml$
-LOG_LEVEL=info
-```
 
-4. Load the secrets:
-```bash
-source .secrets
-```
+# Search terms and files for analysis
+TERMS_TO_SEARCH=vault;swagger
+FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
-Modify these values according to your needs.
+# Default clone directory
+CLONE_DIR=./repositories
+
+## Explanation of FILES_TO_SEARCH regex patterns:
+- `(?i)`: Case-insensitive matching
+- `$`: End of the string
+
+### Examples
+- `(?i)sonar-project.properties$`
+  - Matches: `sonar-project.properties`, `Sonar-Project.Properties`
+  - Does not match: `sonar-project.properties.txt`, `my-sonar-project.properties`
+- `(?i)docker-compose(-\w+)?\.yaml$`
+  - Matches: `docker-compose.yaml`, `docker-compose-test.yaml`
+  - Does not match: `docker-compose.yaml.backup`
+```
 
 ## Usage
 
@@ -83,7 +100,7 @@ Modify these values according to your needs.
 ```bash
 ./git-archive-s3 clone [flags]
   -d, --dir-path string   Directory for cloned repositories (default: ./repositories)
-  -m, --main-only        Clone only main/master branches
+  -m, --main-only        Clone only main/master/develop branches
   -s, --shallow          Perform shallow clone (latest commit only)
 ```
 
@@ -104,3 +121,10 @@ Modify these values according to your needs.
 ./git-archive-s3 upload [flags]
   -d, --dir-path string   Path to directory to upload
 ```
+
+## Notes
+- All configuration is now centralized in a single `.env` file
+- Environment variables can be used to override any setting from the `.env` file
+- The DEVELOPERS_MAP feature allows you to map developer usernames to their full names in the report
+- When using --main-only (-m), only the main branch (main, master, or develop if neither exists) will be cloned
+- The report reflects the state of the cloned repositories, so if you clone with --main-only, the report will only show the main branches
