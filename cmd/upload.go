@@ -25,7 +25,7 @@ var uploadCmd = &cobra.Command{
 }
 
 func init() {
-	uploadCmd.Flags().StringVarP(&dirpath, "dir-path", "d", "", "The directory path you want to uplaod.")
+	uploadCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "The directory path you want to uplaod.")
 	uploadCmd.MarkFlagRequired("path")
 	rootCmd.AddCommand(uploadCmd)
 }
