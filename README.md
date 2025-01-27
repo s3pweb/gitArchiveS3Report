@@ -74,7 +74,7 @@ TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
 # Default clone directory
-CLONE_DIR=./repositories
+DIR=./repositories
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
@@ -99,16 +99,16 @@ CLONE_DIR=./repositories
 ### Clone Repositories
 ```bash
 ./git-archive-s3 clone [flags]
-  -p, --dir-path string   Directory for cloned repositories (default: ./repositories)
-  -m, --main-only         Clone only main/master/develop branches
-  -s, --shallow           Perform shallow clone (latest commit only)
+  -p, --dir-path string   Directory for cloned repositories (default: ./repositories) (optional)
+  -m, --main-only         Clone only main/master/develop branches (optional)
+  -s, --shallow           Perform shallow clone (latest commit only) (optional)
 ```
 
 ### Generate Report
 ```bash
 ./git-archive-s3 report [flags]
-  -p, --dir-path string   Path to repositories directory
-  -d, --dev-sheets        Generate developer-specific sheets
+  -p, --dir-path string   Path to repositories directory (optional)
+  -d, --dev-sheets        Generate developer-specific sheets (optional)
 ```
 
 ### Create ZIP Archives
