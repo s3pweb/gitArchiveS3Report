@@ -110,6 +110,11 @@ func Init() {
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
 	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
 
+	// Filter empty values
+	cfg.App.DefaultColumns = filterEmpty(cfg.App.DefaultColumns)
+	cfg.App.TermsToSearch = filterEmpty(cfg.App.TermsToSearch)
+	cfg.App.FilesToSearch = filterEmpty(cfg.App.FilesToSearch)
+
 }
 
 // Get returns the configuration instance
@@ -123,4 +128,14 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return os.WriteFile(dst, input, 0644)
+}
+
+func filterEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }
