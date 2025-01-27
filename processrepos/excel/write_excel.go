@@ -68,32 +68,44 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 		fileTotals[file] = 0
 	}
 
-	// Calculate total number of searchable items
-	totalSearchableItems := len(cfg.App.TermsToSearch) + len(cfg.App.FilesToSearch)
-
 	// Write column headers and data
 	for _, column := range columns {
 		row := 2
 		for _, branchInfo := range branchesInfo {
 			styles.SetOneHeader(f, sheet, strings.ToUpper(removeRegex(column)), nbrcolumn)
 
-			// If column is "Count", calculate the total number of TRUE values
+			// If column is "Count", calculate the number of terms and files that are TRUE
 			if column == "Count" {
 				trueCount := 0
-				// Count only TRUE values in TermsToSearch
-				for _, term := range cfg.App.TermsToSearch {
-					if val, exists := branchInfo.TermsToSearch[term]; exists && val {
-						trueCount++
+				denominator := 0
+
+				// Only count terms if there are terms to search
+				if len(cfg.App.TermsToSearch) > 0 {
+					denominator += len(cfg.App.TermsToSearch)
+					for _, term := range cfg.App.TermsToSearch {
+						if val, exists := branchInfo.TermsToSearch[term]; exists && val {
+							trueCount++
+						}
 					}
 				}
-				// Count only TRUE values in FilesToSearch
-				for _, file := range cfg.App.FilesToSearch {
-					if val, exists := branchInfo.FilesToSearch[file]; exists && val {
-						trueCount++
+
+				// Only count files if there are files to search
+				if len(cfg.App.FilesToSearch) > 0 {
+					denominator += len(cfg.App.FilesToSearch)
+					for _, file := range cfg.App.FilesToSearch {
+						if val, exists := branchInfo.FilesToSearch[file]; exists && val {
+							trueCount++
+						}
 					}
 				}
+
+				// If no element to count, write 0/0
 				cell := fmt.Sprintf("%c%d", nbrcolumn, row)
-				f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d", trueCount, totalSearchableItems))
+				if denominator == 0 {
+					f.SetCellValue(sheet, cell, "0/0")
+				} else {
+					f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d", trueCount, denominator))
+				}
 				cellStyle, _ := styles.CreateCellStyle(f)
 				f.SetCellStyle(sheet, cell, cell, cellStyle)
 			} else {
