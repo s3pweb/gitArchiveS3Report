@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/s3pweb/gitArchiveS3Report/utils"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/spf13/viper"
 )
@@ -111,9 +112,9 @@ func Init() {
 	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
 
 	// Filter empty values
-	cfg.App.DefaultColumns = filterEmpty(cfg.App.DefaultColumns)
-	cfg.App.TermsToSearch = filterEmpty(cfg.App.TermsToSearch)
-	cfg.App.FilesToSearch = filterEmpty(cfg.App.FilesToSearch)
+	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)
+	cfg.App.TermsToSearch = utils.FilterEmpty(cfg.App.TermsToSearch)
+	cfg.App.FilesToSearch = utils.FilterEmpty(cfg.App.FilesToSearch)
 
 }
 
@@ -128,14 +129,4 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return os.WriteFile(dst, input, 0644)
-}
-
-func filterEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
 }
