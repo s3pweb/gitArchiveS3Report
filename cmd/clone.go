@@ -11,6 +11,7 @@ import (
 var (
 	mainBranchOnly bool
 	shallowClone   bool
+	dirpath        string
 )
 
 var cloneCmd = &cobra.Command{

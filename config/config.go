@@ -95,7 +95,7 @@ func Init() {
 	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
-	cfg.App.DefaultCloneDir = viper.GetString("CLONE_DIR")
+	cfg.App.DefaultCloneDir = viper.GetString("DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
 	// Bitbucket Configuration

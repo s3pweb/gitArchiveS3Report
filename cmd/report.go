@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/processrepos/excel"
@@ -10,7 +11,6 @@ import (
 )
 
 var (
-	dirpath   string
 	devSheets bool
 )
 
@@ -28,6 +28,10 @@ var reportCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.Get()
 		cfg.App.DevSheets = devSheets
+
+		if dirpath == "" {
+			dirpath = filepath.Join(cfg.App.DefaultCloneDir, cfg.Bitbucket.Workspace)
+		}
 
 		err := excel.ReportExcel(dirpath, cfg)
 		if err != nil {
