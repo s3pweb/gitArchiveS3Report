@@ -10,7 +10,7 @@ import (
 func Branches(repo *git.Repository) ([]string, error) {
 	var branches []string
 
-	// Obtenir uniquement les branches locales
+	// Obtain only local branches
 	branchRefs, err := repo.Branches()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get branches: %w", err)
