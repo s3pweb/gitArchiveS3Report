@@ -42,7 +42,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path")
+	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path (default: ./repositories/<workspace>)")
 	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
 	rootCmd.AddCommand(reportCmd)
 }
