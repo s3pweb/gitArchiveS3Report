@@ -1,10 +1,10 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/spf13/viper"
 )
 
@@ -31,6 +31,7 @@ type AWSConfig struct {
 	SecretAccessKey string
 	Region          string
 	BucketName      string
+	UploadKey       string
 }
 
 type LoggerConfig struct {
@@ -46,100 +47,80 @@ type AppConfig struct {
 	DefaultCloneDir string
 	MainBranchOnly  bool
 	ShallowClone    bool
+	DevSheets       bool
 }
 
 // Init initializes the configuration
-func Init() error {
-	// Default configuration
-	setDefaults()
+func Init() {
+	log, _ := logger.NewLogger("Config", "trace")
 
-	// Configuration via file (optional)
-	viper.SetConfigName("config")
+	viper.SetConfigName(".env")
+	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
 
-	// The config file is optional
+	// Read .env file
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fmt.Errorf("error reading config file: %w", err)
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Info("No .env file found, copying from example.env...")
+			if err := copyFile("example.env", ".env"); err != nil {
+				log.Error("Error copying example.env: %v", err)
+				os.Exit(1)
+			}
+			if err := viper.ReadInConfig(); err != nil {
+				log.Error("Error reading config file: %v", err)
+				os.Exit(1)
+			}
+		} else {
+			log.Error("Error reading config file: %v", err)
+			os.Exit(1)
 		}
 	}
 
-	// Environment variables (override file)
-	viper.AutomaticEnv()
+	// Configure viper mappings
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Mapping environment variables
-	mapEnvVariables()
+	// Set default values
+	viper.SetDefault("app.cpu", 1)
+	viper.SetDefault("app.cloneDir", "./repositories")
 
-	// Loading the configuration
+	// Load config into struct
 	cfg = &Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
-		return fmt.Errorf("unable to decode config: %w", err)
+		log.Error("Unable to decode config: %v", err)
+		os.Exit(1)
 	}
 
-	// Validating the configuration
-	return validateConfig(cfg)
-}
+	// Application Configuration
+	cfg.App.CPU = viper.GetInt("CPU")
+	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
+	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
+	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
+	cfg.App.DefaultCloneDir = viper.GetString("CLONE_DIR")
+	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
-func setDefaults() {
-	// App defaults
-	viper.SetDefault("app.defaultCloneDir", "./repositories")
-	viper.SetDefault("app.cpu", 1)
-	viper.SetDefault("logger.level", "info")
-	viper.SetDefault("app.defaultColumns", []string{
-		"RepoName", "BranchName", "LastCommitDate", "TimeSinceLastCommit",
-		"Commitnbr", "HostLine", "LastDeveloper", "LastDeveloperPercentage",
-	})
-	viper.SetDefault("app.termsToSearch", []string{"vaumt", "swagger"})
-	viper.SetDefault("app.filesToSearch", []string{
-		"(?i)sonar-project.properties$",
-		"(?i)bitbucket-pipelines.yml$",
-		"(?i)Dockerfile$",
-		"(?i)docker-compose(-\\w+)?\\.yaml$",
-	})
-	viper.SetDefault("app.mainBranchOnly", false)
-	viper.SetDefault("app.shallowClone", false)
+	// Bitbucket Configuration
+	cfg.Bitbucket.Token = viper.GetString("BITBUCKET_TOKEN")
+	cfg.Bitbucket.Username = viper.GetString("BITBUCKET_USERNAME")
+	cfg.Bitbucket.Workspace = viper.GetString("BITBUCKET_WORKSPACE")
 
-}
+	// AWS Configuration
+	cfg.AWS.AccessKeyID = viper.GetString("AWS_ACCESS_KEY_ID")
+	cfg.AWS.SecretAccessKey = viper.GetString("AWS_SECRET_ACCESS_KEY")
+	cfg.AWS.Region = viper.GetString("AWS_REGION")
+	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
+	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
 
-func mapEnvVariables() {
-	// Explicit mapping of environment variables
-	envMappings := map[string]string{
-		"BITBUCKET_TOKEN":       "bitbucket.token",
-		"BITBUCKET_USERNAME":    "bitbucket.username",
-		"BITBUCKET_WORKSPACE":   "bitbucket.workspace",
-		"AWS_ACCESS_KEY_ID":     "aws.accessKeyID",
-		"AWS_SECRET_ACCESS_KEY": "aws.secretAccessKey",
-		"AWS_REGION":            "aws.region",
-		"AWS_BUCKET_NAME":       "aws.bucketName",
-		"LOG_LEVEL":             "logger.level",
-		"APP_CPU":               "app.cpu",
-		"APP_CLONE_DIR":         "app.defaultCloneDir",
-		"APP_MAIN_BRANCH_ONLY":  "app.mainBranchOnly",
-	}
-
-	for env, path := range envMappings {
-		if value := os.Getenv(env); value != "" {
-			viper.Set(path, value)
-		}
-	}
-}
-
-func validateConfig(cfg *Config) error {
-	if cfg.Bitbucket.Token == "" {
-		return fmt.Errorf("bitbucket token is required (BITBUCKET_TOKEN)")
-	}
-	if cfg.Bitbucket.Username == "" {
-		return fmt.Errorf("bitbucket username is required (BITBUCKET_USERNAME)")
-	}
-	if cfg.Bitbucket.Workspace == "" {
-		return fmt.Errorf("bitbucket workspace is required (BITBUCKET_WORKSPACE)")
-	}
-	return nil
 }
 
 // Get returns the configuration instance
 func Get() *Config {
 	return cfg
+}
+
+func copyFile(src, dst string) error {
+	input, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, input, 0644)
 }

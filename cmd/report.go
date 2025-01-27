@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/processrepos/excel"
 	"github.com/spf13/cobra"
+)
+
+var (
+	dirpath   string
+	devSheets bool
 )
 
 var reportCmd = &cobra.Command{
@@ -16,10 +22,14 @@ var reportCmd = &cobra.Command{
 			- Main branches
 			- Develop branches
 			- Files and terms to search in each branch
-			You can specify the directory path where the repositories are cloned (-d, --dir-path).`,
+			You can specify the directory path where the repositories are cloned (-p, --dir-path).
+			Use --dev-sheets or -d to include per-developer sheets in the report.`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := excel.ReportExcel(dirpath)
+		cfg := config.Get()
+		cfg.App.DevSheets = devSheets
+
+		err := excel.ReportExcel(dirpath, cfg)
 		if err != nil {
 			fmt.Printf("Error generating Excel report: %v\n", err)
 			os.Exit(1)
@@ -29,5 +39,6 @@ var reportCmd = &cobra.Command{
 
 func init() {
 	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path")
+	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
 	rootCmd.AddCommand(reportCmd)
 }

@@ -11,57 +11,17 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
 	"github.com/s3pweb/gitArchiveS3Report/utils/styles"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/text/unicode/norm"
 )
 
-func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, developBranches []structs.BranchInfo) error {
+func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, developBranches []structs.BranchInfo, includeDevSheets bool) error {
 	allBranchesSheet := "Branches"
 	mainBranchesSheet := "Main Branches"
 	developBranchesSheet := "Develop Branches"
-
-	infoSheet := "Report Info"
-	f.NewSheet(infoSheet)
-
-	hasShallowClones := false
-	for _, branch := range allBranches {
-		if branch.IsShallow {
-			hasShallowClones = true
-			break
-		}
-	}
-
-	if hasShallowClones {
-		headerStyle, err := styles.CreateHeaderStyle(f)
-		if err != nil {
-			return err
-		}
-		cellStyle, err := styles.CreateCellStyle(f)
-		if err != nil {
-			return err
-		}
-
-		f.SetColWidth(infoSheet, "A", "B", 50)
-
-		f.SetCellValue(infoSheet, "A1", "Report Limitations")
-		f.SetCellStyle(infoSheet, "A1", "A1", headerStyle)
-
-		infoRows := []string{
-			"Some repositories in this report are shallow clones (depth=1)",
-			"For these repositories:",
-			"- Only the most recent commit is available",
-			"- Developer statistics are limited to the last commit",
-			"- Commit count shows only the available commits",
-		}
-
-		for i, text := range infoRows {
-			cell := fmt.Sprintf("A%d", i+2)
-			f.SetCellValue(infoSheet, cell, text)
-			f.SetCellStyle(infoSheet, cell, cell, cellStyle)
-		}
-	}
 
 	err := writeDataToSheet(f, allBranchesSheet, allBranches)
 	if err != nil {
@@ -76,57 +36,21 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 		return err
 	}
 
-	err = createDeveloperSheets(f, allBranches)
-	if err != nil {
-		return err
-	}
-
-	fixedColumns := countFixedColumns(".config")
-	maxFilesToSearch := 0
-	maxTermsToSearch := 0
-
-	for _, branch := range allBranches {
-		if len(branch.FilesToSearch) > maxFilesToSearch {
-			maxFilesToSearch = len(branch.FilesToSearch)
-		}
-		if len(branch.TermsToSearch) > maxTermsToSearch {
-			maxTermsToSearch = len(branch.TermsToSearch)
-		}
-	}
-
-	totalColumns := fixedColumns + maxFilesToSearch + maxTermsToSearch
-
-	headerStyle, err := styles.CreateHeaderStyle(f)
-	if err != nil {
-		return err
-	}
-
-	sheets := []string{allBranchesSheet, mainBranchesSheet, developBranchesSheet}
-	for _, sheet := range sheets {
-		f.SetCellStyle(sheet, "A1", fmt.Sprintf("%c1", 'A'+totalColumns-1), headerStyle)
-		f.SetRowHeight(sheet, 1, 40)
-		for col := 'A'; col < 'A'+rune(totalColumns); col++ {
-			f.SetColWidth(sheet, string(col), string(col), 20)
+	if includeDevSheets {
+		err = createDeveloperSheets(f, allBranches)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
-func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.BranchInfo) error {
 
-	configColumns, err := getConfigColumn(".config")
-	if err != nil {
-		return err
-	}
-	termsColumns, err := getTermsColumn(".config")
-	if err != nil {
-		return err
-	}
-	filesColumns, err := getFilesColumn(".config")
-	if err != nil {
-		return err
-	}
-	columns := append(configColumns, append(termsColumns, filesColumns...)...)
+func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.BranchInfo) error {
+	cfg := config.Get()
+	columns := cfg.App.DefaultColumns
+	columns = append(columns, cfg.App.TermsToSearch...)
+	columns = append(columns, cfg.App.FilesToSearch...)
 
 	sortBranchesByLastCommit(branchesInfo)
 	nbrcolumn := 'A'
@@ -256,7 +180,7 @@ func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) 
 				if strings.ToLower(RemoveAccentsAndSpecialChars(branchInfo.LastDeveloper)) == developer ||
 					strings.ToLower(RemoveAccentsAndSpecialChars(branchInfo.TopDeveloper)) == developer {
 					styles.SetOneHeader(f, developer, strings.ToUpper(removeRegex(column)), nbrcolumn)
-					err := writeFieldToColumnDev(f, developer, row, column, nbrcolumn, branchInfo)
+					err := writeFieldToColumn(f, developer, row, column, nbrcolumn, branchInfo)
 					if err != nil {
 						return err
 					}
@@ -268,57 +192,6 @@ func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) 
 
 		}
 	}
-	return nil
-}
-
-func writeFieldToColumnDev(f *excelize.File, sheet string, row int, fieldName string, col rune, branchInfo interface{}) error {
-	cellStyle, err := styles.CreateCellStyle(f)
-	if err != nil {
-		return err
-	}
-	falseStyle, err := styles.FalseCells(f)
-	if err != nil {
-		return err
-	}
-	v := reflect.ValueOf(branchInfo)
-	fieldValue := v.FieldByName(fieldName)
-	if !fieldValue.IsValid() {
-		if !branchInfo.(structs.BranchInfo).FilesToSearch[fieldName] && !branchInfo.(structs.BranchInfo).TermsToSearch[fieldName] {
-			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), "FALSE")
-			f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
-			f.SetRowHeight(sheet, row, 30)
-			return nil
-		} else if branchInfo.(structs.BranchInfo).FilesToSearch[fieldName] || branchInfo.(structs.BranchInfo).TermsToSearch[fieldName] {
-			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), "TRUE")
-			f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
-			f.SetRowHeight(sheet, row, 30)
-			return nil
-		} else {
-			return fmt.Errorf("field %s not found in struct", fieldName)
-		}
-	}
-
-	cell := fmt.Sprintf("%c%d", col, row)
-	if fieldName == "LastCommitDate" {
-		f.SetCellValue(sheet, cell, fieldValue.Interface().(time.Time).Format("2006-01-02 15:04"))
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, cellStyle)
-		return nil
-	}
-	if fieldName == "LastDeveloperPercentage" || fieldName == "TopDeveloperPercentage" {
-		f.SetCellValue(sheet, cell, fmt.Sprintf("%.2f%%", fieldValue.Float()))
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, cellStyle)
-		return nil
-	}
-	if fieldValue.Interface() == "false" {
-		f.SetCellValue(sheet, cell, fieldValue)
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, falseStyle)
-	}
-	f.SetCellValue(sheet, cell, fieldValue.Interface())
-	f.SetRowHeight(sheet, row, 30)
-	f.SetCellStyle(sheet, cell, cell, cellStyle)
 	return nil
 }
 
@@ -411,25 +284,7 @@ func removeRegex(s string) string {
 	return re.ReplaceAllString(s, "")
 }
 
-func countFixedColumns(config string) int {
-	file, err := os.Open(config)
-	if err != nil {
-		return 0
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "DEFAULT_COLUMN=") {
-			columns := strings.TrimPrefix(line, "DEFAULT_COLUMN=")
-			return len(strings.Split(columns, ";"))
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0
-	}
-
-	return 0
+func countFixedColumns() int {
+	cfg := config.Get()
+	return len(cfg.App.DefaultColumns)
 }
