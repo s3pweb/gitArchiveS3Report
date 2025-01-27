@@ -26,9 +26,9 @@ go build -o git-archive-s3
 ```
 
 2. Install ghorg:
-```bash
-go install github.com/gabrie30/ghorg@v1.8.4
+https://github.com/gabrie30/ghorg?tab=readme-ov-file#installation
 
+```bash
 # Verify ghorg installation
 which ghorg
 ```
