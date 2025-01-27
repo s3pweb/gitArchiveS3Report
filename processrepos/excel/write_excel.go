@@ -12,7 +12,6 @@ import (
 	"unicode"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
-	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
 	"github.com/s3pweb/gitArchiveS3Report/utils/styles"
 	"github.com/xuri/excelize/v2"
@@ -49,16 +48,9 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 
 func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.BranchInfo) error {
 	cfg := config.Get()
-	log, _ := logger.NewLogger("WriteDataToSheet", "trace")
-	log.Info("Writing to sheet %s\n", sheet)
-	log.Info("Number of branches: %d\n", len(branchesInfo))
-	log.Info("Configured columns: %v\n", cfg.App.DefaultColumns)
-
 	columns := cfg.App.DefaultColumns
 	columns = append(columns, cfg.App.TermsToSearch...)
 	columns = append(columns, cfg.App.FilesToSearch...)
-
-	log.Info("Final columns to write: %v\n", columns)
 
 	sortBranchesByLastCommit(branchesInfo)
 	nbrcolumn := 'A'

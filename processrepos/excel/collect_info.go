@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -552,50 +551,4 @@ func getDockerComposeFileName(dirPath string) string {
 	}
 	// Return the name of the first match
 	return filepath.Base(files[0])
-}
-
-// getDevelopersMap reads the .config file and extracts name replacements from the DEVELOPERS_MAP line
-func getDevelopersMap(cfg *config.Config) map[string]string {
-	replacements := make(map[string]string)
-	if cfg.App.DevelopersMap == "" {
-		return replacements
-	}
-
-	// Parse la string des développeurs (format: "dev1=John Doe;dev2=Jane Smith")
-	replacementsList := strings.Split(cfg.App.DevelopersMap, ";")
-	for _, replacement := range replacementsList {
-		parts := strings.Split(replacement, "=")
-		if len(parts) == 2 {
-			replacements[strings.TrimSpace(parts[1])] = strings.TrimSpace(parts[0])
-		}
-	}
-
-	return replacements
-}
-
-// GetCPU reads the .config file and extracts the number of threads to use
-func GetCPU(filePath string) int {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return 1
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "CPU=") {
-			cpu, err := strconv.Atoi(strings.TrimPrefix(line, "CPU="))
-			if err != nil {
-				return 1
-			}
-			return cpu
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 1
-	}
-
-	return 1 // No CPU line found
 }
