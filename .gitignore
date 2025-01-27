@@ -3,6 +3,5 @@ repositories
 .secrets
 .config
 default-config.json
-backupcobra
 .env
 git-archive-s3
