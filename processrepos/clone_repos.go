@@ -101,14 +101,14 @@ func cleanupNonDefaultBranches(basePath string, logger *logger.Logger) error {
 
 		logger.Info("Default branch for %s is %s", entry.Name(), defaultBranch)
 
-		// Checkout la branche par défaut
+		// Checkout on the default branch
 		cmd = exec.Command("git", "-C", repoPath, "checkout", defaultBranch)
 		if err := cmd.Run(); err != nil {
 			logger.Error("Failed to checkout default branch for %s: %v", entry.Name(), err)
 			continue
 		}
 
-		// Supprime toutes les autres branches locales
+		// Delete all other branches
 		cmd = exec.Command("git", "-C", repoPath, "branch", "|", "grep", "-v", defaultBranch, "|", "xargs", "git", "branch", "-D")
 		if err := cmd.Run(); err != nil {
 			logger.Error("Failed to delete other branches for %s: %v", entry.Name(), err)

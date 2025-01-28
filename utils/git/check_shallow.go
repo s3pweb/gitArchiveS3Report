@@ -5,18 +5,18 @@ import (
 	"path/filepath"
 )
 
-// IsShallowClone vérifie si un dépôt est un shallow clone
+// IsShallowClone checks if the repository is a shallow clone
 func IsShallowClone(repoPath string) bool {
-	// Dans un shallow clone, Git crée un fichier .git/shallow
+	// In a shallow clone, the .git/shallow file exists
 	shallowFile := filepath.Join(repoPath, ".git", "shallow")
 	_, err := os.Stat(shallowFile)
 	return err == nil
 }
 
-// GetRepoDepth retourne la profondeur du dépôt (-1 si ce n'est pas un shallow clone)
+// GetRepoDepth returns the depth of the repository clone
 func GetRepoDepth(repoPath string) int {
 	if !IsShallowClone(repoPath) {
-		return -1 // -1 indique un clone complet
+		return -1 // -1 indicates that the repository is not shallow
 	}
-	return 1 // Pour l'instant, nous supportons uniquement depth=1
+	return 1 // Shallow clone depth is always 1
 }
