@@ -9,27 +9,40 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "backup-cobra",
-	Short: "Backup-cobra: A BitBucket repository backup utility",
-	Long: `Backup-cobra is a simple and fast utility for cloning
+	Use:   "Git Report Archive S3",
+	Short: "Git Report Archive S3: A BitBucket repository backup utility",
+	Long: `Git Report Archive S3 is a simple and fast utility for cloning
         and backing up BitBucket repositories from Bitbucket.
         Use it to automate your BitBucket backups with simple commands.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		Cyanp := color.New(color.FgCyan).SprintfFunc()
-		color.Blue("Welcome to Backup Tool. Use a subcommand to start.")
-		fmt.Printf("Use the ")
-		fmt.Println(Cyanp("clone"))
-		fmt.Println(" command to clone Bitbucket repositories.")
-		fmt.Printf("Use the ")
-		fmt.Println(Cyanp("report"))
-		fmt.Println(" command to create a excel report for each repositories.")
-		fmt.Printf("Use the ")
-		fmt.Println(Cyanp("zip"))
-		fmt.Println(" command to zip the repositories.")
-		fmt.Printf("Use the ")
-		fmt.Println(Cyanp("upload"))
-		fmt.Println(" command to upload files or directories into your amazon S3 space.")
+		// Définir les styles de couleur
+		titleColor := color.New(color.FgHiCyan, color.Bold)
+		cmdColor := color.New(color.FgCyan)
+		descColor := color.New(color.FgWhite)
+
+		// Afficher le titre
+		fmt.Println()
+		titleColor.Println("🚀 Welcome to Git Report Archive S3 Tool")
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
+
+		// Afficher les commandes disponibles
+		displayCommand(cmdColor, descColor, "clone", "Clone Bitbucket repositories")
+		displayCommand(cmdColor, descColor, "report", "Generate Excel report for repositories")
+		displayCommand(cmdColor, descColor, "zip", "Create ZIP archives of repositories")
+		displayCommand(cmdColor, descColor, "upload", "Upload files to Amazon S3")
+
+		// Afficher l'aide
+		fmt.Println()
+		descColor.Println("Use './git-archive-s3 [command] --help' for more information about a command.")
+		fmt.Println()
 	},
+}
+
+func displayCommand(cmdColor, descColor *color.Color, cmd, desc string) {
+	fmt.Printf("  ")
+	cmdColor.Printf("%-10s", cmd)
+	descColor.Printf("  %s\n", desc)
 }
 
 func init() {

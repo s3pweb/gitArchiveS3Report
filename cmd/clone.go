@@ -11,6 +11,7 @@ import (
 var (
 	mainBranchOnly bool
 	shallowClone   bool
+	dirpath        string
 )
 
 var cloneCmd = &cobra.Command{
@@ -46,8 +47,8 @@ var cloneCmd = &cobra.Command{
 }
 
 func init() {
-	cloneCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "The directory path where the repositories will be cloned")
-	cloneCmd.Flags().BoolVarP(&mainBranchOnly, "main-only", "m", false, "Clone only the main/master branch")
+	cloneCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "The directory path where the repositories will be cloned (default: ./repositories)")
+	cloneCmd.Flags().BoolVarP(&mainBranchOnly, "main-only", "m", false, "Clone only the default branch (main/master/develop)")
 	cloneCmd.Flags().BoolVarP(&shallowClone, "shallow", "s", false, "Perform a shallow clone with only the latest commit")
 	rootCmd.AddCommand(cloneCmd)
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/s3pweb/gitArchiveS3Report/utils"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/spf13/viper"
 )
@@ -95,7 +96,7 @@ func Init() {
 	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
-	cfg.App.DefaultCloneDir = viper.GetString("CLONE_DIR")
+	cfg.App.DefaultCloneDir = viper.GetString("DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
 	// Bitbucket Configuration
@@ -109,6 +110,11 @@ func Init() {
 	cfg.AWS.Region = viper.GetString("AWS_REGION")
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
 	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
+
+	// Filter empty values
+	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)
+	cfg.App.TermsToSearch = utils.FilterEmpty(cfg.App.TermsToSearch)
+	cfg.App.FilesToSearch = utils.FilterEmpty(cfg.App.FilesToSearch)
 
 }
 

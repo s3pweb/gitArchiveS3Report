@@ -214,49 +214,102 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 // Returns:
 //   - A slice of BranchInfo structs containing information about the branches in the repositories.
 //   - An error if there is an issue reading the directories or processing the repositories.
-func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.BranchInfo, error) {
+//
+// collect_info.go
+func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) ([]structs.BranchInfo, int, error) {
 	cfg := config.Get()
 	var branchesInfo []structs.BranchInfo
+	processedRepos := 0
+	emptyRepos := make([]string, 0)
 
 	nbThreads := cfg.App.CPU
 	if nbThreads <= 0 {
 		nbThreads = 1
 	}
 
-	logger.Info("Number of threads: %d", nbThreads)
+	logger.Info("Using %d threads for processing", nbThreads)
 
 	var mutex sync.Mutex
 	pool := pond.New(nbThreads, 0, pond.MinWorkers(nbThreads))
 
 	folders, err := os.ReadDir(basePath)
-
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
+	// Create error channel to collect non-fatal errors
+	errorChan := make(chan error, len(folders))
+
+	// Create a channel for empty repositories
+	emptyRepoChan := make(chan string, len(folders))
+
 	for _, oneFolder := range folders {
-		path := basePath + "/" + oneFolder.Name()
+		path := filepath.Join(basePath, oneFolder.Name())
 
 		if oneFolder.IsDir() && isGitRepo(path) {
-
 			pool.Submit(func() {
-				infos, err := CollectBranchInfoForOneRepo(logger, branchesInfo, path)
-
+				// Check if repository is empty
+				isEmpty, err := isEmptyRepository(path)
 				if err != nil {
-					logger.Error("Error processing repository: %s [%s], continue ...", path, err)
+					errorChan <- fmt.Errorf("error checking repository %s: %v", path, err)
 					return
 				}
 
+				if isEmpty {
+					emptyRepoChan <- oneFolder.Name()
+					mutex.Lock()
+					processedRepos++
+					logger.Warn("Empty repository detected: %s", oneFolder.Name())
+					mutex.Unlock()
+					return
+				}
+
+				infos, err := CollectBranchInfoForOneRepo(logger, branchesInfo, path)
+
 				mutex.Lock()
-				branchesInfo = append(branchesInfo, infos...)
+				if err != nil {
+					logger.Error("Error processing repository %s: %v", path, err)
+					errorChan <- fmt.Errorf("error in repo %s: %v", path, err)
+				} else {
+					branchesInfo = append(branchesInfo, infos...)
+					processedRepos++
+					// Log progress every 10% or when processing the last repository
+					if processedRepos%(totalRepos/10) == 0 || processedRepos == totalRepos {
+						logger.Info("Progress: %d/%d repositories processed (%.1f%%)",
+							processedRepos, totalRepos,
+							float64(processedRepos)/float64(totalRepos)*100)
+					}
+				}
 				mutex.Unlock()
 			})
-		} else {
-			logger.Trace("Not a git repository: %s", path)
 		}
 	}
-	pool.StopAndWait()
 
+	pool.StopAndWait()
+	close(errorChan)
+	close(emptyRepoChan)
+
+	// Collect empty repositories
+	for repoName := range emptyRepoChan {
+		emptyRepos = append(emptyRepos, repoName)
+	}
+
+	// Sort and log empty repositories
+	if len(emptyRepos) > 0 {
+		sort.Strings(emptyRepos)
+		logger.Warn("Found %d empty repositories:", len(emptyRepos))
+		for _, repoName := range emptyRepos {
+			logger.Warn("- %s", repoName)
+		}
+	}
+
+	// Collect any non-fatal errors
+	var errors []error
+	for err := range errorChan {
+		errors = append(errors, err)
+	}
+
+	// Sort branch information
 	sort.Slice(branchesInfo, func(i, j int) bool {
 		if branchesInfo[i].RepoName == branchesInfo[j].RepoName {
 			return branchesInfo[i].LastCommitDate.After(branchesInfo[j].LastCommitDate)
@@ -264,7 +317,34 @@ func CollectBranchInfo(basePath string, logger *logger.Logger) ([]structs.Branch
 		return branchesInfo[i].RepoName < branchesInfo[j].RepoName
 	})
 
-	return branchesInfo, nil
+	// If there were errors but some repositories were processed, log them but continue
+	if len(errors) > 0 {
+		logger.Warn("%d repositories had errors during processing", len(errors))
+		for _, err := range errors {
+			logger.Warn("Repository processing error: %v", err)
+		}
+	}
+
+	return branchesInfo, processedRepos, nil
+}
+
+// isEmptyRepository checks if a Git repository is empty (no commits)
+func isEmptyRepository(path string) (bool, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return false, err
+	}
+
+	// Try to get HEAD reference
+	_, err = repo.Head()
+	if err != nil {
+		if err == plumbing.ErrReferenceNotFound {
+			return true, nil // Repository exists but has no commits
+		}
+		return false, err
+	}
+
+	return false, nil
 }
 
 // getLastDeveloperExcludingUser finds the last developer excluding a specific user and returns the developer's name and the commit date
@@ -425,29 +505,21 @@ func searchInFiles(repoPath, searchTermRegex string) bool {
 
 func formatDuration(d time.Duration) string {
 	days := int(d.Hours() / 24)
-	if days < 7 {
-		return fmt.Sprintf("%d days", days)
-	} else if days < 30 {
-		weeks := days / 7
-		remainingDays := days % 7
-		if remainingDays == 0 {
-			return fmt.Sprintf("%d weeks", weeks)
-		}
-		return fmt.Sprintf("%d weeks and %d days", weeks, remainingDays)
-	} else {
+
+	// If more than a month
+	if days >= 30 {
 		months := days / 30
-		remainingDays := days % 30
-		weeks := remainingDays / 7
-		remainingDays = remainingDays % 7
-		if weeks == 0 && remainingDays == 0 {
-			return fmt.Sprintf("%d months", months)
-		} else if weeks == 0 {
-			return fmt.Sprintf("%d months and %d days", months, remainingDays)
-		} else if remainingDays == 0 {
-			return fmt.Sprintf("%d months and %d weeks", months, weeks)
-		}
-		return fmt.Sprintf("%d months, %d weeks and %d days", months, weeks, remainingDays)
+		return fmt.Sprintf("%d months", months)
 	}
+
+	// If more than a week
+	if days >= 7 {
+		weeks := days / 7
+		return fmt.Sprintf("%d weeks", weeks)
+	}
+
+	// If less than a week
+	return fmt.Sprintf("%d days", days)
 }
 
 // countCommits  counts the number of commits in a branch excluding those made by a specific user

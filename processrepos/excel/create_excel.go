@@ -54,5 +54,7 @@ func CreateExcelFile(Branches []structs.BranchInfo) (*excelize.File, error) {
 			f.SetColWidth(sheet, string(col), string(col), 20)
 		}
 	}
+	f.DeleteSheet("Sheet1")
+
 	return f, nil
 }

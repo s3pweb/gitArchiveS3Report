@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/processrepos/excel"
@@ -10,7 +11,6 @@ import (
 )
 
 var (
-	dirpath   string
 	devSheets bool
 )
 
@@ -29,6 +29,10 @@ var reportCmd = &cobra.Command{
 		cfg := config.Get()
 		cfg.App.DevSheets = devSheets
 
+		if dirpath == "" {
+			dirpath = filepath.Join(cfg.App.DefaultCloneDir, cfg.Bitbucket.Workspace)
+		}
+
 		err := excel.ReportExcel(dirpath, cfg)
 		if err != nil {
 			fmt.Printf("Error generating Excel report: %v\n", err)
@@ -38,7 +42,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path")
+	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path (default: ./repositories/<workspace>)")
 	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
 	rootCmd.AddCommand(reportCmd)
 }

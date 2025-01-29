@@ -54,10 +54,10 @@ func Upload(dirPath string) error {
 		return fmt.Errorf("unable to load SDK config, %v", err)
 	}
 
-	// Créer un client S3
+	// create an S3 client
 	client := s3.NewFromConfig(awsConfig)
 
-	// Parcourir récursivement le répertoire et uploader chaque fichier
+	// Walk through the directory and upload all files
 	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

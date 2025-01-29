@@ -54,19 +54,107 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 
 	sortBranchesByLastCommit(branchesInfo)
 	nbrcolumn := 'A'
+
+	// Create maps to store totals for terms and files
+	termTotals := make(map[string]int)
+	fileTotals := make(map[string]int)
+	repoCount := countUniqueRepos(branchesInfo)
+
+	// Initialize maps for terms and files
+	for _, term := range cfg.App.TermsToSearch {
+		termTotals[term] = 0
+	}
+	for _, file := range cfg.App.FilesToSearch {
+		fileTotals[file] = 0
+	}
+
+	// Write column headers and data
 	for _, column := range columns {
 		row := 2
 		for _, branchInfo := range branchesInfo {
 			styles.SetOneHeader(f, sheet, strings.ToUpper(removeRegex(column)), nbrcolumn)
-			err := writeFieldToColumn(f, sheet, row, column, nbrcolumn, branchInfo)
-			if err != nil {
-				return err
+
+			// If column is "Count", calculate the number of terms and files that are TRUE
+			if column == "Count" {
+				trueCount := 0
+				denominator := 0
+
+				// Only count terms if there are terms to search
+				if len(cfg.App.TermsToSearch) > 0 {
+					denominator += len(cfg.App.TermsToSearch)
+					for _, term := range cfg.App.TermsToSearch {
+						if val, exists := branchInfo.TermsToSearch[term]; exists && val {
+							trueCount++
+						}
+					}
+				}
+
+				// Only count files if there are files to search
+				if len(cfg.App.FilesToSearch) > 0 {
+					denominator += len(cfg.App.FilesToSearch)
+					for _, file := range cfg.App.FilesToSearch {
+						if val, exists := branchInfo.FilesToSearch[file]; exists && val {
+							trueCount++
+						}
+					}
+				}
+
+				// If no element to count, write 0/0
+				cell := fmt.Sprintf("%c%d", nbrcolumn, row)
+				if denominator == 0 {
+					f.SetCellValue(sheet, cell, "0/0")
+				} else {
+					f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d", trueCount, denominator))
+				}
+				cellStyle, _ := styles.CreateCellStyle(f)
+				f.SetCellStyle(sheet, cell, cell, cellStyle)
+			} else {
+				err := writeFieldToColumn(f, sheet, row, column, nbrcolumn, branchInfo)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Update totals for terms and files only when explicitly TRUE
+			if val, exists := branchInfo.TermsToSearch[column]; exists && val {
+				termTotals[column]++
+			}
+			if val, exists := branchInfo.FilesToSearch[column]; exists && val {
+				fileTotals[column]++
 			}
 			row++
 		}
+
+		// Add totals row after all data
+		cell := fmt.Sprintf("%c%d", nbrcolumn, row)
+		cellStyle, _ := styles.CreateCellStyle(f)
+
+		// Write totals for terms and files
+		if termTotals[column] > 0 {
+			percentage := float64(termTotals[column]) / float64(repoCount) * 100
+			f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d (%.1f%%)", termTotals[column], repoCount, percentage))
+			f.SetCellStyle(sheet, cell, cell, cellStyle)
+		} else if fileTotals[column] > 0 {
+			percentage := float64(fileTotals[column]) / float64(repoCount) * 100
+			f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d (%.1f%%)", fileTotals[column], repoCount, percentage))
+			f.SetCellStyle(sheet, cell, cell, cellStyle)
+		} else if nbrcolumn == 'H' {
+			f.SetCellValue(sheet, cell, "TOTAL")
+			f.SetCellStyle(sheet, cell, cell, cellStyle)
+		}
+
+		f.SetRowHeight(sheet, row, 30)
 		nbrcolumn++
 	}
 	return nil
+}
+
+func countUniqueRepos(branchesInfo []structs.BranchInfo) int {
+	repos := make(map[string]bool)
+	for _, info := range branchesInfo {
+		repos[info.RepoName] = true
+	}
+	return len(repos)
 }
 
 func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName string, col rune, branchInfo interface{}) error {
@@ -78,43 +166,45 @@ func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName strin
 	if err != nil {
 		return err
 	}
+
 	v := reflect.ValueOf(branchInfo)
 	fieldValue := v.FieldByName(fieldName)
+
 	if !fieldValue.IsValid() {
-		if !branchInfo.(structs.BranchInfo).FilesToSearch[fieldName] && !branchInfo.(structs.BranchInfo).TermsToSearch[fieldName] {
-			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), "FALSE")
-			f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
+		branchInfoTyped := branchInfo.(structs.BranchInfo)
+		// Check specifically in FilesToSearch and TermsToSearch maps
+		if val, exists := branchInfoTyped.FilesToSearch[fieldName]; exists {
+			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), strings.ToUpper(fmt.Sprintf("%v", val)))
+			if val {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
+			} else {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
+			}
 			f.SetRowHeight(sheet, row, 30)
 			return nil
-		} else if branchInfo.(structs.BranchInfo).FilesToSearch[fieldName] || branchInfo.(structs.BranchInfo).TermsToSearch[fieldName] {
-			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), "TRUE")
-			f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
-			f.SetRowHeight(sheet, row, 30)
-			return nil
-		} else {
-			return fmt.Errorf("field %s not found in struct", fieldName)
 		}
+		if val, exists := branchInfoTyped.TermsToSearch[fieldName]; exists {
+			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), strings.ToUpper(fmt.Sprintf("%v", val)))
+			if val {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
+			} else {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
+			}
+			f.SetRowHeight(sheet, row, 30)
+			return nil
+		}
+		return fmt.Errorf("field %s not found in struct", fieldName)
 	}
 
 	cell := fmt.Sprintf("%c%d", col, row)
 	if fieldName == "LastCommitDate" {
 		f.SetCellValue(sheet, cell, fieldValue.Interface().(time.Time).Format("2006-01-02 15:04"))
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, cellStyle)
-		return nil
-	}
-	if fieldName == "LastDeveloperPercentage" || fieldName == "TopDeveloperPercentage" {
+	} else if fieldName == "LastDeveloperPercentage" || fieldName == "TopDeveloperPercentage" {
 		f.SetCellValue(sheet, cell, fmt.Sprintf("%.2f%%", fieldValue.Float()))
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, cellStyle)
-		return nil
+	} else {
+		f.SetCellValue(sheet, cell, fieldValue.Interface())
 	}
-	if fieldValue.Interface() == "false" {
-		f.SetCellValue(sheet, cell, fieldValue)
-		f.SetRowHeight(sheet, row, 30)
-		f.SetCellStyle(sheet, cell, cell, falseStyle)
-	}
-	f.SetCellValue(sheet, cell, fieldValue.Interface())
+
 	f.SetRowHeight(sheet, row, 30)
 	f.SetCellStyle(sheet, cell, cell, cellStyle)
 	return nil
