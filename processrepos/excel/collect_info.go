@@ -505,29 +505,21 @@ func searchInFiles(repoPath, searchTermRegex string) bool {
 
 func formatDuration(d time.Duration) string {
 	days := int(d.Hours() / 24)
-	if days < 7 {
-		return fmt.Sprintf("%d days", days)
-	} else if days < 30 {
-		weeks := days / 7
-		remainingDays := days % 7
-		if remainingDays == 0 {
-			return fmt.Sprintf("%d weeks", weeks)
-		}
-		return fmt.Sprintf("%d weeks and %d days", weeks, remainingDays)
-	} else {
+
+	// If more than a month
+	if days >= 30 {
 		months := days / 30
-		remainingDays := days % 30
-		weeks := remainingDays / 7
-		remainingDays = remainingDays % 7
-		if weeks == 0 && remainingDays == 0 {
-			return fmt.Sprintf("%d months", months)
-		} else if weeks == 0 {
-			return fmt.Sprintf("%d months and %d days", months, remainingDays)
-		} else if remainingDays == 0 {
-			return fmt.Sprintf("%d months and %d weeks", months, weeks)
-		}
-		return fmt.Sprintf("%d months, %d weeks and %d days", months, weeks, remainingDays)
+		return fmt.Sprintf("%d months", months)
 	}
+
+	// If more than a week
+	if days >= 7 {
+		weeks := days / 7
+		return fmt.Sprintf("%d weeks", weeks)
+	}
+
+	// If less than a week
+	return fmt.Sprintf("%d days", days)
 }
 
 // countCommits  counts the number of commits in a branch excluding those made by a specific user
