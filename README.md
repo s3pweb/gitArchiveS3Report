@@ -74,7 +74,7 @@ TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
 # Default clone directory
-DIR=./repositories
+DIR=../repositories
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
