@@ -40,15 +40,16 @@ type LoggerConfig struct {
 }
 
 type AppConfig struct {
-	CPU             int
-	DevelopersMap   string
-	DefaultColumns  []string
-	TermsToSearch   []string
-	FilesToSearch   []string
-	DefaultCloneDir string
-	MainBranchOnly  bool
-	ShallowClone    bool
-	DevSheets       bool
+	CPU            int
+	DevelopersMap  string
+	DefaultColumns []string
+	TermsToSearch  []string
+	FilesToSearch  []string
+	Dir            string
+	DestDir        string
+	MainBranchOnly bool
+	ShallowClone   bool
+	DevSheets      bool
 }
 
 // Init initializes the configuration
@@ -96,7 +97,7 @@ func Init() {
 	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
-	cfg.App.DefaultCloneDir = viper.GetString("DIR")
+	cfg.App.Dir = viper.GetString("DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
 	// Bitbucket Configuration
