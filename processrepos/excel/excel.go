@@ -81,7 +81,7 @@ func ReportExcel(basePath, dirDest string, devSheets bool) error {
 		return fmt.Errorf("failed to write branch info to Excel: %v", err)
 	}
 
-	err = SaveExcelFile(excelFile, basePath, logger)
+	err = SaveExcelFile(excelFile, basePath, dirDest, logger)
 	if err != nil {
 		return fmt.Errorf("failed to save Excel file: %v", err)
 	}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/processrepos/excel"
@@ -22,14 +23,23 @@ var reportCmd = &cobra.Command{
 			- Main branches
 			- Develop branches
 			- Files and terms to search in each branch
-			You can specify the directory path where the repositories are cloned (-p, --dir-path).
+			
+			By default, the report will be generated at the workspace root level.
+			Use -p or --dir-path to specify a different output location.
 			Use --dev-sheets or -d to include per-developer sheets in the report.`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.Get()
 		cfg.App.DevSheets = devSheets
 
-		err := excel.ReportExcel(cfg.App.Dir, dirDest, devSheets)
+		outputDir := cfg.App.Dir
+		if dirDest != "" {
+			outputDir = dirDest
+		}
+
+		workspacePath := filepath.Join(cfg.App.Dir, cfg.Bitbucket.Workspace)
+
+		err := excel.ReportExcel(workspacePath, outputDir, devSheets)
 		if err != nil {
 			fmt.Printf("Error generating Excel report: %v\n", err)
 			os.Exit(1)
@@ -38,7 +48,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().StringVarP(&dirDest, "dir-path", "p", "", "Directory where you want the report to be generated (default: value of DIR in .env)")
+	reportCmd.Flags().StringVarP(&dirDest, "dir-path", "p", "", "Directory where you want the report to be generated (optional)")
 	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
 	rootCmd.AddCommand(reportCmd)
 }

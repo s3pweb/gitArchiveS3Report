@@ -335,7 +335,6 @@ waitLoop:
 		errors = append(errors, err)
 	}
 
-	logWithTime("Starting branch sorting...")
 	sort.Slice(branchesInfo, func(i, j int) bool {
 		if branchesInfo[i].RepoName == branchesInfo[j].RepoName {
 			return branchesInfo[i].LastCommitDate.After(branchesInfo[j].LastCommitDate)

@@ -9,11 +9,8 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-func SaveExcelFile(f *excelize.File, basePath string, logger *logger.Logger) error {
-	// Get the parent directory of basePath (workspace root)
-	workspaceRoot := filepath.Dir(basePath)
-	// Get workspace name from basePath
-	workspace := filepath.Base(basePath)
+func SaveExcelFile(f *excelize.File, workspacePath string, outputDir string, logger *logger.Logger) error {
+	workspace := filepath.Base(workspacePath)
 
 	// Format current time
 	currentTime := time.Now()
@@ -22,7 +19,7 @@ func SaveExcelFile(f *excelize.File, basePath string, logger *logger.Logger) err
 		currentTime.Format("2006-01-02"),
 		currentTime.Format("15-04"))
 
-	excelFileName := filepath.Join(workspaceRoot, fileName)
+	excelFileName := filepath.Join(outputDir, fileName)
 	if err := f.SaveAs(excelFileName); err != nil {
 		return err
 	}
