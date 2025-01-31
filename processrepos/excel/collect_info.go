@@ -217,6 +217,12 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 //
 // collect_info.go
 func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) ([]structs.BranchInfo, int, error) {
+	startTime := time.Now()
+	logWithTime := func(format string, args ...interface{}) {
+		elapsed := time.Since(startTime).Round(time.Millisecond)
+		logger.Info("[%s] %s", elapsed, fmt.Sprintf(format, args...))
+	}
+
 	cfg := config.Get()
 	var branchesInfo []structs.BranchInfo
 	processedRepos := 0
@@ -227,7 +233,7 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 		nbThreads = 1
 	}
 
-	logger.Info("Using %d threads for processing", nbThreads)
+	logWithTime("Using %d threads for processing", nbThreads)
 
 	var mutex sync.Mutex
 	pool := pond.New(nbThreads, 0, pond.MinWorkers(nbThreads))
@@ -237,10 +243,8 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 		return nil, 0, err
 	}
 
-	// Create error channel to collect non-fatal errors
+	// Create buffered channels with precise sizes
 	errorChan := make(chan error, len(folders))
-
-	// Create a channel for empty repositories
 	emptyRepoChan := make(chan string, len(folders))
 
 	for _, oneFolder := range folders {
@@ -259,7 +263,7 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 					emptyRepoChan <- oneFolder.Name()
 					mutex.Lock()
 					processedRepos++
-					logger.Warn("Empty repository detected: %s", oneFolder.Name())
+					logWithTime("Empty repository detected: %s", oneFolder.Name())
 					mutex.Unlock()
 					return
 				}
@@ -268,14 +272,13 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 
 				mutex.Lock()
 				if err != nil {
-					logger.Error("Error processing repository %s: %v", path, err)
+					logWithTime("Error processing repository %s: %v", path, err)
 					errorChan <- fmt.Errorf("error in repo %s: %v", path, err)
 				} else {
 					branchesInfo = append(branchesInfo, infos...)
 					processedRepos++
-					// Log progress every 10% or when processing the last repository
 					if processedRepos%(totalRepos/10) == 0 || processedRepos == totalRepos {
-						logger.Info("Progress: %d/%d repositories processed (%.1f%%)",
+						logWithTime("Progress: %d/%d repositories processed (%.1f%%)",
 							processedRepos, totalRepos,
 							float64(processedRepos)/float64(totalRepos)*100)
 					}
@@ -285,31 +288,54 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 		}
 	}
 
-	pool.StopAndWait()
-	close(errorChan)
-	close(emptyRepoChan)
+	logWithTime("Waiting for the last repositories to complete processing...")
 
-	// Collect empty repositories
+	// Create a ticker to periodically log progress
+	ticker := time.NewTicker(5 * time.Second)
+	done := make(chan bool)
+
+	go func() {
+		pool.StopAndWait()
+		done <- true
+	}()
+
+	// Wait for either completion or ticker
+waitLoop:
+	for {
+		select {
+		case <-done:
+			ticker.Stop()
+			break waitLoop
+		case <-ticker.C:
+			logWithTime("Still processing final repositories...")
+		}
+	}
+
+	logWithTime("All repositories processing completed")
+
+	logWithTime("Starting post-processing phase...")
+
+	logWithTime("Processing empty repositories...")
+	close(emptyRepoChan)
 	for repoName := range emptyRepoChan {
 		emptyRepos = append(emptyRepos, repoName)
 	}
 
-	// Sort and log empty repositories
 	if len(emptyRepos) > 0 {
 		sort.Strings(emptyRepos)
-		logger.Warn("Found %d empty repositories:", len(emptyRepos))
+		logWithTime("Found %d empty repositories:", len(emptyRepos))
 		for _, repoName := range emptyRepos {
-			logger.Warn("- %s", repoName)
+			logWithTime("- %s", repoName)
 		}
 	}
 
-	// Collect any non-fatal errors
+	close(errorChan)
 	var errors []error
 	for err := range errorChan {
 		errors = append(errors, err)
 	}
 
-	// Sort branch information
+	logWithTime("Starting branch sorting...")
 	sort.Slice(branchesInfo, func(i, j int) bool {
 		if branchesInfo[i].RepoName == branchesInfo[j].RepoName {
 			return branchesInfo[i].LastCommitDate.After(branchesInfo[j].LastCommitDate)
@@ -317,13 +343,14 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 		return branchesInfo[i].RepoName < branchesInfo[j].RepoName
 	})
 
-	// If there were errors but some repositories were processed, log them but continue
 	if len(errors) > 0 {
-		logger.Warn("%d repositories had errors during processing", len(errors))
+		logWithTime("%d repositories had errors during processing", len(errors))
 		for _, err := range errors {
-			logger.Warn("Repository processing error: %v", err)
+			logWithTime("Repository processing error: %v", err)
 		}
 	}
+
+	logWithTime("Post-processing phase completed")
 
 	return branchesInfo, processedRepos, nil
 }

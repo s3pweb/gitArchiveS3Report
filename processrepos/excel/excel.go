@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/s3pweb/gitArchiveS3Report/config"
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
 )
@@ -18,7 +17,7 @@ import (
 //
 // Returns:
 //   - error: Any error encountered during report generation
-func ReportExcel(basePath string, cfg *config.Config) error {
+func ReportExcel(basePath, dirDest string, devSheets bool) error {
 	logger, err := logger.NewLogger("ReportExcel", "info")
 	if err != nil {
 		return err
@@ -62,15 +61,11 @@ func ReportExcel(basePath string, cfg *config.Config) error {
 	}
 	processedReposCount := len(repoMap)
 
-	logger.Info("Successfully processed %d/%d repositories", processedReposCount, totalRepos)
-
-	logger.Info("Creating Excel file structure...")
 	excelFile, err := CreateExcelFile(branchesInfo)
 	if err != nil {
 		return fmt.Errorf("failed to create Excel file: %v", err)
 	}
 
-	logger.Info("Writing branch information to Excel...")
 	var mainBranches, developBranches []structs.BranchInfo
 	for _, branch := range branchesInfo {
 		if branch.BranchName == "main" || branch.BranchName == "origin/main" ||
@@ -81,12 +76,11 @@ func ReportExcel(basePath string, cfg *config.Config) error {
 		}
 	}
 
-	err = WriteBranchInfoToExcel(excelFile, branchesInfo, mainBranches, developBranches, cfg.App.DevSheets)
+	err = WriteBranchInfoToExcel(excelFile, branchesInfo, mainBranches, developBranches, devSheets)
 	if err != nil {
 		return fmt.Errorf("failed to write branch info to Excel: %v", err)
 	}
 
-	logger.Info("Saving Excel file...")
 	err = SaveExcelFile(excelFile, basePath, logger)
 	if err != nil {
 		return fmt.Errorf("failed to save Excel file: %v", err)
@@ -97,7 +91,5 @@ func ReportExcel(basePath string, cfg *config.Config) error {
 	logger.Info("Total repositories found: %d", totalRepos)
 	logger.Info("Repositories successfully processed: %d/%d", processedReposCount, totalRepos)
 	logger.Info("Total branches analyzed: %d", len(branchesInfo))
-	logger.Info("Report saved successfully")
-
 	return nil
 }

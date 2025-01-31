@@ -1,6 +1,7 @@
 package excel
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -9,9 +10,19 @@ import (
 )
 
 func SaveExcelFile(f *excelize.File, basePath string, logger *logger.Logger) error {
-	currentDate := time.Now().Format("2006-01-02")
-	excelFileName := filepath.Join(basePath, "workspace_report_"+currentDate+".xlsx")
-	logger.Info("Saving Excel file: %s", excelFileName)
+	// Get the parent directory of basePath (workspace root)
+	workspaceRoot := filepath.Dir(basePath)
+	// Get workspace name from basePath
+	workspace := filepath.Base(basePath)
+
+	// Format current time
+	currentTime := time.Now()
+	fileName := fmt.Sprintf("%s_report_%s_%s.xlsx",
+		workspace,
+		currentTime.Format("2006-01-02"),
+		currentTime.Format("15-04"))
+
+	excelFileName := filepath.Join(workspaceRoot, fileName)
 	if err := f.SaveAs(excelFileName); err != nil {
 		return err
 	}

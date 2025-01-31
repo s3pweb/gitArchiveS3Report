@@ -63,8 +63,8 @@ LOG_LEVEL=debug
 CPU=1
 
 # Developer name mappings (optional)
-# Format: alias1=Real Name 1;alias2=Real Name 2
-DEVELOPERS_MAP=john=John Doe;jane=Jane Smith
+# Format: RealName1=alias1;RealName2=alias2
+DEVELOPERS_MAP=John Doe=john;Jane Smith=jane
 
 # Default columns for the Excel report
 DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage
@@ -73,8 +73,8 @@ DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;
 TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
-# Default clone directory
-DIR=./repositories
+# Default directory for all operations (clone, report, zip, upload)
+DIR=../repositories
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
@@ -99,7 +99,6 @@ DIR=./repositories
 ### Clone Repositories
 ```bash
 ./git-archive-s3 clone [flags]
-  -p, --dir-path string   Directory for cloned repositories (default: ./repositories) (optional)
   -m, --main-only         Clone only main/master/develop branches (optional)
   -s, --shallow           Perform shallow clone (latest commit only) (optional)
 ```
@@ -107,14 +106,14 @@ DIR=./repositories
 ### Generate Report
 ```bash
 ./git-archive-s3 report [flags]
-  -p, --dir-path string   Path to repositories directory (optional)
+  -p, --dir-path string   Path where the report will be created (if not specified, it uses the path from DIR of file .env) (optional)
   -d, --dev-sheets        Generate developer-specific sheets (optional)
 ```
 
 ### Create ZIP Archives
 ```bash
 ./git-archive-s3 zip [flags]
-  -p, --dir-path string   Path to repositories directory (required)
+  -p, --dir-path string   Path where ZIP archives will be created (if not specified, it uses the path from DIR of file .env) (optional)
 ```
 
 ### Upload to S3
@@ -126,6 +125,7 @@ DIR=./repositories
 ## Notes
 - All configuration is now centralized in a single `.env` file
 - Environment variables can be used to override any setting from the `.env` file
-- The DEVELOPERS_MAP feature allows you to map developer usernames to their full names in the report
+- The DEVELOPERS_MAP feature allows you to map developers' real names to their aliases in the report
 - When using --main-only (-m), only the main branch (main, master, or develop if neither exists) will be cloned
 - The report reflects the state of the cloned repositories, so if you clone with --main-only, the report will only show the main branches
+- ZIP archives are generated in the same directory as the workspace with the naming format: workspace_YYYY-MM-DD_HH-mm.zip
