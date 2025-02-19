@@ -48,10 +48,25 @@ func CreateExcelFile(Branches []structs.BranchInfo) (*excelize.File, error) {
 	// Apply header style and set row height for each sheet
 	sheets := []string{allBranchesSheet, mainBranchesSheet, developBranchesSheet}
 	for _, sheet := range sheets {
+		// Apply header style
 		f.SetCellStyle(sheet, "A1", fmt.Sprintf("%c1", 'A'+totalColumns-1), headerStyle)
 		f.SetRowHeight(sheet, 1, 40)
+
+		// Set column widths
 		for col := 'A'; col < 'A'+rune(totalColumns); col++ {
 			f.SetColWidth(sheet, string(col), string(col), 20)
+		}
+
+		// Freeze the first row
+		if err := f.SetPanes(sheet, `{
+			"freeze": true,
+			"split": false,
+			"x_split": 0,
+			"y_split": 1,
+			"top_left_cell": "A2",
+			"active_pane": "bottomLeft"
+		}`); err != nil {
+			return nil, err
 		}
 	}
 	f.DeleteSheet("Sheet1")

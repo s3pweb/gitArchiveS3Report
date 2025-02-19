@@ -48,9 +48,10 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 
 func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.BranchInfo) error {
 	cfg := config.Get()
+
 	columns := cfg.App.DefaultColumns
-	columns = append(columns, cfg.App.TermsToSearch...)
 	columns = append(columns, cfg.App.FilesToSearch...)
+	columns = append(columns, cfg.App.TermsToSearch...)
 
 	sortBranchesByLastCommit(branchesInfo)
 	nbrcolumn := 'A'
@@ -222,10 +223,14 @@ func countTrueInMap(values map[string]bool) int {
 
 func sortBranchesByLastCommit(branches []structs.BranchInfo) {
 	sort.Slice(branches, func(i, j int) bool {
+		// First sort by repo name
+		if branches[i].RepoName != branches[j].RepoName {
+			return strings.ToLower(branches[i].RepoName) < strings.ToLower(branches[j].RepoName)
+		}
+		// If repo names are the same, sort by last commit date
 		return branches[i].LastCommitDate.After(branches[j].LastCommitDate)
 	})
 }
-
 func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) error {
 	developerSheets := make(map[string]bool)
 
@@ -257,7 +262,7 @@ func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) 
 				if developer == "" {
 					continue
 				}
-				developer = strings.ToLower(RemoveAccentsAndSpecialChars(developer))
+				developer = strings.ToLower(removeAccentsAndSpecialChars(developer))
 
 				if !developerSheets[developer] {
 					f.NewSheet(developer)
@@ -267,8 +272,8 @@ func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) 
 						f.SetColWidth(developer, string(col), string(col), 20)
 					}
 				}
-				if strings.ToLower(RemoveAccentsAndSpecialChars(branchInfo.LastDeveloper)) == developer ||
-					strings.ToLower(RemoveAccentsAndSpecialChars(branchInfo.TopDeveloper)) == developer {
+				if strings.ToLower(removeAccentsAndSpecialChars(branchInfo.LastDeveloper)) == developer ||
+					strings.ToLower(removeAccentsAndSpecialChars(branchInfo.TopDeveloper)) == developer {
 					styles.SetOneHeader(f, developer, strings.ToUpper(removeRegex(column)), nbrcolumn)
 					err := writeFieldToColumn(f, developer, row, column, nbrcolumn, branchInfo)
 					if err != nil {
@@ -285,7 +290,7 @@ func createDeveloperSheets(f *excelize.File, branchesInfo []structs.BranchInfo) 
 	return nil
 }
 
-func RemoveAccentsAndSpecialChars(s string) string {
+func removeAccentsAndSpecialChars(s string) string {
 	t := norm.NFD.String(s)
 
 	var b strings.Builder
