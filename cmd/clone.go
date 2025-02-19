@@ -17,12 +17,7 @@ var (
 var cloneCmd = &cobra.Command{
 	Use:   "clone",
 	Short: "Clone repositories from a BitBucket workspace",
-	Long: `Clone repositories from a BitBucket workspace.
-			You can specify options to:
-			- Clone only main/master branches (-m, --main-only)
-			- Perform a shallow clone with only the latest commit (-s, --shallow)
-			- Specify the directory path where the repositories will be cloned (-d, --dir-path),
-			This is useful when you only need to check the current state of files.`,
+	Long:  `Clone repositories from a BitBucket workspace.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
 
@@ -47,8 +42,8 @@ var cloneCmd = &cobra.Command{
 }
 
 func init() {
-	cloneCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "The directory path where the repositories will be cloned (default: ./repositories)")
-	cloneCmd.Flags().BoolVarP(&mainBranchOnly, "main-only", "m", false, "Clone only the default branch (main/master/develop)")
-	cloneCmd.Flags().BoolVarP(&shallowClone, "shallow", "s", false, "Perform a shallow clone with only the latest commit")
+	cloneCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "The directory path where the repositories will be cloned (default: DIR in .env)")
+	cloneCmd.Flags().BoolVarP(&mainBranchOnly, "main-only", "m", false, "Clone only the default branch (main|master|develop) (default: false)")
+	cloneCmd.Flags().BoolVarP(&shallowClone, "shallow", "s", false, "Perform a shallow clone with only the latest commit (default: false)")
 	rootCmd.AddCommand(cloneCmd)
 }

@@ -36,7 +36,7 @@ var zipCmd = &cobra.Command{
 }
 
 func init() {
-	zipCmd.Flags().StringVarP(&zipSourcePath, "src-path", "p", "", "Source path to zip (directory or file)")
-	zipCmd.Flags().StringVarP(&zipDestPath, "dest-path", "d", "", "Destination path to save the zip file")
+	zipCmd.Flags().StringVarP(&zipSourcePath, "src-path", "p", "", "Source path to zip (directory or file) (required)")
+	zipCmd.Flags().StringVarP(&zipDestPath, "dest-path", "d", "", "Destination path to save the zip file (default: DEST_DIR if set, otherwise ./archive)")
 	rootCmd.AddCommand(zipCmd)
 }

@@ -19,12 +19,7 @@ var zipLoadCmd = &cobra.Command{
 	Use:   "zipload",
 	Short: "Zip and upload to S3",
 	Long: `Zip a specified path and upload it to Amazon S3 in a single command.
-			This combines the functionality of 'zip' and 'upload' commands.
-			
-			Available Options:
-			--src-path, -p: Source path to zip (directory or file)
-			--dest-path, -d: Destination directory to save the zip file (optional)
-			--remove, -r: Delete local zip file after successful upload`,
+			This combines the functionality of 'zip' and 'upload' commands.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
 
@@ -89,9 +84,9 @@ var zipLoadCmd = &cobra.Command{
 }
 
 func init() {
-	zipLoadCmd.Flags().StringVarP(&zipLoadSourcePath, "src-path", "p", "", "Source path to zip (directory or file)")
-	zipLoadCmd.Flags().StringVarP(&zipLoadDestPath, "dest-path", "d", "", "Destination directory to save the zip file")
-	zipLoadCmd.Flags().BoolVarP(&deleteAfterUpload, "remove", "r", false, "Delete local zip file after successful upload")
+	zipLoadCmd.Flags().StringVarP(&zipLoadSourcePath, "src-path", "p", "", "Source path to zip (directory or file) (required)")
+	zipLoadCmd.Flags().StringVarP(&zipLoadDestPath, "dest-path", "d", "", "Destination directory to save the zip file (optional)")
+	zipLoadCmd.Flags().BoolVarP(&deleteAfterUpload, "remove", "r", false, "Delete local zip file after successful upload (default: false) (optional)")
 	zipLoadCmd.MarkFlagRequired("src-path")
 	rootCmd.AddCommand(zipLoadCmd)
 }

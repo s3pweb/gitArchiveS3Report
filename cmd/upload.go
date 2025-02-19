@@ -19,12 +19,7 @@ var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload repositories to amazon s3",
 	Long: `Upload repositories to amazon s3.
-			You can specify the directory path or specific zip file to upload.
-			
-			Available Options:
-			--dir-path, -p: Directory path containing zip files
-			--all, -a: Upload all zip files in the specified directory
-			--last, -l: Upload only the most recent zip file in the directory`,
+			You can specify the directory path or specific zip file to upload.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if dirpath == "" {
 			return fmt.Errorf("please specify a path using the --dir-path flag")
@@ -137,9 +132,9 @@ func findMostRecentZip(zipFiles []string) (string, error) {
 }
 
 func init() {
-	uploadCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Directory path containing zip files or path to a specific zip file")
-	uploadCmd.Flags().BoolVarP(&uploadAll, "all", "a", false, "Upload all zip files in the directory")
-	uploadCmd.Flags().BoolVarP(&uploadLast, "last", "l", false, "Upload only the most recent zip file")
+	uploadCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Directory path containing zip files or path to a specific zip file (required)")
+	uploadCmd.Flags().BoolVarP(&uploadAll, "all", "a", false, "Upload all zip files in the directory (default: false)")
+	uploadCmd.Flags().BoolVarP(&uploadLast, "last", "l", false, "Upload only the most recent zip file in the directory (default: false)")
 	uploadCmd.MarkFlagRequired("dir-path")
 	rootCmd.AddCommand(uploadCmd)
 }

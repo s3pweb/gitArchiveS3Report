@@ -21,9 +21,7 @@ var reportCmd = &cobra.Command{
 			- Branches
 			- Main branches
 			- Develop branches
-			- Files and terms to search in each branch
-			You can specify the directory path where the repositories are cloned (-p, --dir-path).
-			Use --dev-sheets or -d to include per-developer sheets in the report.`,
+			- Files and terms to search in each branch`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.Get()
@@ -42,7 +40,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path (default: $DIR/$BITBUCKET_WORKSPACE)")
-	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
+	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path (default: DIR/BITBUCKET_WORKSPACE in .env)")
+	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report (default: false)")
 	rootCmd.AddCommand(reportCmd)
 }
