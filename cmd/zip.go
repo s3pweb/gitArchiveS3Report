@@ -9,29 +9,34 @@ import (
 )
 
 var (
-	path     string
-	destPath string
+	zipSourcePath string
+	zipDestPath   string
 )
 
 var zipCmd = &cobra.Command{
 	Use:   "zip",
-	Short: "Zip a specified folder",
-	Long: `Zip a specified folder.
-			You can specify the folder path to zip.`,
+	Short: "Zip a specified path",
+	Long: `Zip a specified path (directory or file).
+			Creates a single zip file for the specified path.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := config.Get()
-		if destPath == "" {
-			destPath = cfg.App.DestDir
+		if zipDestPath == "" {
+			zipDestPath = cfg.App.DestDir
+			if zipDestPath == "" {
+				zipDestPath = "./archive"
+			}
 		}
-		if path == "" {
-			return fmt.Errorf("please specify a path using the -path flag")
+		if zipSourcePath == "" {
+			return fmt.Errorf("please specify a source path using the --src-path (or -p) flag")
 		}
-		return processrepos.Onlyzip(path, destPath)
+
+		fmt.Printf("Creating zip archive from: %s\nDestination: %s\n", zipSourcePath, zipDestPath)
+		return processrepos.Onlyzip(zipSourcePath, zipDestPath)
 	},
 }
 
 func init() {
-	zipCmd.Flags().StringVarP(&path, "dir-path", "p", "", "Folder path to zip")
-	zipCmd.Flags().StringVarP(&destPath, "dest-path", "d", "", "Destination path to save the zip file")
+	zipCmd.Flags().StringVarP(&zipSourcePath, "src-path", "p", "", "Source path to zip (directory or file)")
+	zipCmd.Flags().StringVarP(&zipDestPath, "dest-path", "d", "", "Destination path to save the zip file")
 	rootCmd.AddCommand(zipCmd)
 }
