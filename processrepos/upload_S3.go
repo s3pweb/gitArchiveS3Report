@@ -60,8 +60,10 @@ func uploadFile(client *s3.Client, bucket, filePath, uploadKey string, logger *l
 	return nil
 }
 
-// Upload uploads all files in the specified directory to the specified S3 bucket
-func Upload(dirPath string) error {
+// Upload uploads files to the specified S3 bucket
+// If path is a directory, it uploads all files in the directory
+// If path is a file, it uploads just that file
+func Upload(path string) error {
 	cfg := config.Get()
 
 	logger, err := logger.NewLogger("S3Upload", cfg.Logger.Level)
@@ -69,16 +71,23 @@ func Upload(dirPath string) error {
 		return fmt.Errorf("failed to initialize logger: %v", err)
 	}
 
-	if dirPath == "" {
-		return fmt.Errorf("directory path cannot be empty")
+	if path == "" {
+		return fmt.Errorf("path cannot be empty")
 	}
 
-	// Verify directory exists
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return fmt.Errorf("directory %s does not exist", dirPath)
+	// Verify path exists
+	fileInfo, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("path %s does not exist", path)
+	}
+	if err != nil {
+		return fmt.Errorf("error accessing path %s: %v", path, err)
 	}
 
-	logger.Info("Starting S3 upload process from directory: %s", dirPath)
+	// Determine if we're uploading a single file or a directory
+	isSingleFile := !fileInfo.IsDir()
+
+	logger.Info("Starting S3 upload process from: %s", path)
 	startTime := time.Now()
 
 	// Load AWS configuration
@@ -109,9 +118,14 @@ func Upload(dirPath string) error {
 
 	logger.Info("Successfully connected to S3 bucket: %s", cfg.AWS.BucketName)
 
-	// Count files to upload
+	// If it's a single file, upload it directly
+	if isSingleFile {
+		return uploadFile(client, cfg.AWS.BucketName, path, cfg.AWS.AWSUploadPath, logger)
+	}
+
+	// Otherwise, it's a directory - count files to upload
 	var filesToUpload int
-	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -128,12 +142,12 @@ func Upload(dirPath string) error {
 
 	// Upload files
 	filesUploaded := 0
-	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
-			if err := uploadFile(client, cfg.AWS.BucketName, path, cfg.AWS.UploadKey, logger); err != nil {
+			if err := uploadFile(client, cfg.AWS.BucketName, filePath, cfg.AWS.AWSUploadPath, logger); err != nil {
 				return err
 			}
 			filesUploaded++
