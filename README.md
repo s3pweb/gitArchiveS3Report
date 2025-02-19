@@ -113,11 +113,23 @@ DEST_DIR=../zip
   -d, --dev-sheets        Generate developer-specific sheets (optional)
 ```
 
-### Create ZIP Archives
+### Create ZIP Archive
 ```bash
 ./git-archive-s3 zip [flags]
-  -p, --dir-path string   Path to repositories directory (required)
-  -d, --dest-path string  Destination path to save the zip files (optional)
+  -p, --dir-path string       Path to source directory or file (required)
+  -d, --dest-path string      Destination path to save the zip file (optional)
+```
+
+#### Zip Examples:
+```bash
+# Create a zip archive from a directory
+./git-archive-s3 zip -p /path/to/repositories
+
+# Create a zip archive from a single file
+./git-archive-s3 zip -p /path/to/specific/file.txt
+
+# Specify custom destination for the zip file
+./git-archive-s3 zip -p /path/to/source -d /custom/zip/location
 ```
 
 ### Upload to S3
@@ -143,10 +155,36 @@ DEST_DIR=../zip
 # the tool will list available files and options
 ```
 
+### Zip and Upload Combined
+```bash
+./git-archive-s3 zipload [flags]
+  -p, --src-path string       Source path to zip (directory or file) (required)
+  -d, --dest-path string      Destination directory to save the zip file (optional)
+  -r, --delete                Delete local zip file after successful upload (optional)
+```
+
+#### Zip and Upload Examples:
+```bash
+# Zip a directory and upload the resulting zip file
+./git-archive-s3 zipload -p /path/to/repositories
+
+# Zip a file and upload the resulting zip file
+./git-archive-s3 zipload -p /path/to/specific/file.txt
+
+# Zip a directory, upload it, and delete the local zip file after successful upload
+./git-archive-s3 zipload -p /path/to/repositories -r
+
+# Specify custom destination path for the zip file
+./git-archive-s3 zipload -p /path/to/source -d /path/for/zip/file
+```
+
 ## Notes
 - All configuration is now centralized in a single `.env` file
 - Environment variables can be used to override any setting from the `.env` file
 - The DEVELOPERS_MAP feature allows you to map developer usernames to their full names in the report
 - When using --main-only (-m), only the main branch (main, master, or develop if neither exists) will be cloned
 - The report reflects the state of the cloned repositories, so if you clone with --main-only, the report will only show the main branches
-- The upload command will only upload zip files and provides options to handle multiple zip files
+- The zip command creates a single zip file for the specified path (directory or file)
+- The upload command will upload the specified zip file to S3
+- The zipload command combines zip and upload operations for a more streamlined workflow
+- Use the --delete (-r) option with zipload to automatically clean up local zip files after successful upload to S3

@@ -31,6 +31,7 @@ var rootCmd = &cobra.Command{
 		displayCommand(cmdColor, descColor, "report", "Generate Excel report for repositories")
 		displayCommand(cmdColor, descColor, "zip", "Create ZIP archives of repositories")
 		displayCommand(cmdColor, descColor, "upload", "Upload files to Amazon S3")
+		displayCommand(cmdColor, descColor, "zipload", "Create ZIP archive and upload to S3")
 
 		// Afficher l'aide
 		fmt.Println()
