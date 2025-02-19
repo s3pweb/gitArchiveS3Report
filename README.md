@@ -179,12 +179,4 @@ DEST_DIR=../zipped
 ```
 
 ## Notes
-- All configuration is now centralized in a single `.env` file
 - Environment variables can be used to override any setting from the `.env` file
-- The DEVELOPERS_MAP feature allows you to map developer usernames to their full names in the report
-- When using --main-only (-m), only the main branch (main, master, or develop if neither exists) will be cloned
-- The report reflects the state of the cloned repositories, so if you clone with --main-only, the report will only show the main branches
-- The zip command creates a single zip file for the specified path (directory or file)
-- The upload command will upload the specified zip file to S3
-- The zipload command combines zip and upload operations for a more streamlined workflow
-- Use the --delete (-r) option with zipload to automatically clean up local zip files after successful upload to S3
