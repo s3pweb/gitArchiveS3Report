@@ -32,7 +32,7 @@ type AWSConfig struct {
 	SecretAccessKey string
 	Region          string
 	BucketName      string
-	UploadKey       string
+	AWSUploadPath   string
 }
 
 type LoggerConfig struct {
@@ -40,16 +40,16 @@ type LoggerConfig struct {
 }
 
 type AppConfig struct {
-	CPU            int
-	DevelopersMap  string
-	DefaultColumns []string
-	TermsToSearch  []string
-	FilesToSearch  []string
-	Dir            string
-	DestDir        string
-	MainBranchOnly bool
-	ShallowClone   bool
-	DevSheets      bool
+	CPU             int
+	DevelopersMap   string
+	DefaultColumns  []string
+	TermsToSearch   []string
+	FilesToSearch   []string
+	DefaultCloneDir string
+	DestDir         string
+	MainBranchOnly  bool
+	ShallowClone    bool
+	DevSheets       bool
 }
 
 // Init initializes the configuration
@@ -97,7 +97,8 @@ func Init() {
 	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
-	cfg.App.Dir = viper.GetString("DIR")
+	cfg.App.DefaultCloneDir = viper.GetString("DIR")
+	cfg.App.DestDir = viper.GetString("DEST_DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
 	// Bitbucket Configuration
@@ -110,7 +111,7 @@ func Init() {
 	cfg.AWS.SecretAccessKey = viper.GetString("AWS_SECRET_ACCESS_KEY")
 	cfg.AWS.Region = viper.GetString("AWS_REGION")
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
-	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
+	cfg.AWS.AWSUploadPath = viper.GetString("AWS_PATH")
 
 	// Filter empty values
 	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)

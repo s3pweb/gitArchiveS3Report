@@ -2,73 +2,64 @@ package processrepos
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 	"time"
 
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 )
 
-type zipProgress struct {
-	totalFiles     int32
-	processedFiles int32
-}
-
-func Onlyzip(sourceDir, destDir, workspace string) error {
-	logger, err := logger.NewLogger("OnlyZip", "info")
+// Onlyzip creates a zip archive of the specified directory
+// The zip filename includes the source name plus timestamp (YYYYMMDD_HHMM)
+func Onlyzip(sourcePath, destPath string) error {
+	logger, err := logger.NewLogger("OnlyZip", "trace")
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	startTime := time.Now()
-	logger.Info("Starting ZIP creation process...")
-	logger.Info("Source directory: %s", sourceDir)
-
-	// Count total files before starting
-	progress := &zipProgress{}
-	err = filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			atomic.AddInt32(&progress.totalFiles, 1)
-		}
-		return nil
-	})
+	// Ensure destination directory exists
+	err = os.MkdirAll(destPath, os.ModePerm)
 	if err != nil {
-		logger.Error("Error counting files: %v", err)
+		logger.Error("error creating destination directory: %v", err)
 		return err
 	}
 
-	logger.Info("Found %d files to compress", progress.totalFiles)
-
-	// Create destination directory if it doesn't exist
-	if destDir == "" {
-		destDir = sourceDir
-	}
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		logger.Error("Error creating destination directory: %v", err)
+	// Check if source exists
+	sourceInfo, err := os.Stat(sourcePath)
+	if err != nil {
+		logger.Error("error accessing source path: %v", err)
 		return err
 	}
 
-	// Format current time for filename
-	currentTime := time.Now()
-	zipFileName := fmt.Sprintf("%s_%s_%s.zip",
-		workspace,
-		currentTime.Format("2006-01-02"),
-		currentTime.Format("15-04"))
+	// Get current timestamp for the filename (french format)
+	timestamp := time.Now().Format("02-01-2006_15h04") // DD-MM-YYYY_HHMM
 
-	// Create the full path for the ZIP file
-	zipFilePath := filepath.Join(destDir, zipFileName)
-	logger.Info("Creating ZIP file: %s", zipFilePath)
+	// Get a meaningful name for the zip file
+	var zipName string
+	if sourceInfo.IsDir() {
+		// Get the base name of the source directory
+		zipName = filepath.Base(sourcePath)
+		if zipName == "." || zipName == ".." || zipName == "/" {
+			// Use only timestamp if we can't get a meaningful name
+			zipName = "archive"
+		}
+	} else {
+		// For a single file, use the filename without extension
+		zipName = filepath.Base(sourcePath)
+		zipName = zipName[:len(zipName)-len(filepath.Ext(zipName))]
+	}
 
-	// Create the ZIP file
+	// Combine name and timestamp
+	zipFileName := zipName + "_" + timestamp + ".zip"
+
+	// Create the zip file path
+	zipFilePath := filepath.Join(destPath, zipFileName)
+	logger.Info("Creating archive: %s", zipFilePath)
+
 	zipFile, err := os.Create(zipFilePath)
 	if err != nil {
-		logger.Error("Error creating ZIP file: %v", err)
+		logger.Error("error creating ZIP file: %v", err)
 		return err
 	}
 	defer zipFile.Close()
@@ -76,99 +67,79 @@ func Onlyzip(sourceDir, destDir, workspace string) error {
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
-	// Start a goroutine to log progress
-	done := make(chan bool)
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				processed := atomic.LoadInt32(&progress.processedFiles)
-				total := atomic.LoadInt32(&progress.totalFiles)
-				if total > 0 {
-					percentage := float64(processed) / float64(total) * 100
-					logger.Info("Progress: %d/%d files (%.1f%%)", processed, total, percentage)
-				}
-			}
-		}
-	}()
+	// Define the base path for relative path calculations
+	basePath := sourcePath
+	if !sourceInfo.IsDir() {
+		// If it's a file, use its directory as base path
+		basePath = filepath.Dir(sourcePath)
+	}
 
-	// Read directory entries
-	entries, err := os.ReadDir(sourceDir)
-	if err != nil {
-		logger.Error("Error reading directory: %v", err)
+	// Function to add a file or directory to the zip
+	addToZip := func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Get path relative to the base path for ZIP entry
+		relPath, err := filepath.Rel(basePath, filePath)
+		if err != nil {
+			return err
+		}
+
+		// Skip the root directory itself when zipping a directory
+		if sourceInfo.IsDir() && relPath == "." {
+			return nil
+		}
+
+		// Handle directories
+		if info.IsDir() {
+			// Use forward slashes for ZIP entries
+			_, err = zipWriter.Create(filepath.ToSlash(relPath) + "/")
+			return err
+		}
+
+		// Handle files
+		// If we're zipping a single file and this is that file, use just the filename
+		// without directory structure
+		zipPath := relPath
+		if !sourceInfo.IsDir() && filePath == sourcePath {
+			zipPath = filepath.Base(sourcePath)
+		}
+
+		// Replace OS-specific path separators with forward slashes for ZIP
+		zipPath = filepath.ToSlash(zipPath)
+
+		fileToZip, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer fileToZip.Close()
+
+		zipEntry, err := zipWriter.Create(zipPath)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(zipEntry, fileToZip)
 		return err
 	}
 
-	// Process each entry
-	for _, entry := range entries {
-		if entry.IsDir() {
-			dirPath := filepath.Join(sourceDir, entry.Name())
-			err = addDirectoryToZip(zipWriter, dirPath, "", logger, progress)
-			if err != nil {
-				logger.Error("Error adding directory to ZIP: %v", err)
-				return err
-			}
-			logger.Info("Added directory to ZIP: %s", entry.Name())
+	// If source is a directory, walk through it and add all files
+	if sourceInfo.IsDir() {
+		err = filepath.Walk(sourcePath, addToZip)
+		if err != nil {
+			logger.Error("error adding files to the ZIP: %v", err)
+			return err
+		}
+	} else {
+		// Source is a single file, add just that file
+		err = addToZip(sourcePath, sourceInfo, nil)
+		if err != nil {
+			logger.Error("error adding file to the ZIP: %v", err)
+			return err
 		}
 	}
 
-	// Stop the progress logging goroutine
-	close(done)
-
-	duration := time.Since(startTime).Round(time.Second)
-	logger.Info("ZIP creation completed in %s", duration)
-	logger.Info("Successfully processed %d files", progress.processedFiles)
-	logger.Info("ZIP file created: %s", zipFilePath)
+	logger.Info("Successfully created archive: %s", zipFilePath)
 	return nil
-}
-
-func addDirectoryToZip(zipWriter *zip.Writer, dirPath, baseInZip string, logger *logger.Logger, progress *zipProgress) error {
-	files, err := os.ReadDir(dirPath)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		fullPath := filepath.Join(dirPath, file.Name())
-		if file.IsDir() {
-			// Add directory and its contents recursively
-			newBase := filepath.Join(baseInZip, file.Name())
-			err = addDirectoryToZip(zipWriter, fullPath, newBase, logger, progress)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Add file to ZIP
-			zipPath := filepath.Join(baseInZip, file.Name())
-			err = addFileToZip(zipWriter, fullPath, zipPath, progress)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func addFileToZip(zipWriter *zip.Writer, filePath, zipPath string, progress *zipProgress) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer, err := zipWriter.Create(zipPath)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(writer, file)
-	if err == nil {
-		atomic.AddInt32(&progress.processedFiles, 1)
-	}
-	return err
 }

@@ -12,7 +12,6 @@ import (
 
 var (
 	devSheets bool
-	dirDest   string
 )
 
 var reportCmd = &cobra.Command{
@@ -22,24 +21,17 @@ var reportCmd = &cobra.Command{
 			- Branches
 			- Main branches
 			- Develop branches
-			- Files and terms to search in each branch
-			
-			By default, the report will be generated at the workspace root level.
-			Use -p or --dir-path to specify a different output location.
-			Use --dev-sheets or -d to include per-developer sheets in the report.`,
+			- Files and terms to search in each branch`,
 	Args: cobra.MinimumNArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.Get()
 		cfg.App.DevSheets = devSheets
 
-		outputDir := cfg.App.Dir
-		if dirDest != "" {
-			outputDir = dirDest
+		if dirpath == "" {
+			dirpath = filepath.Join(cfg.App.DefaultCloneDir, cfg.Bitbucket.Workspace)
 		}
 
-		workspacePath := filepath.Join(cfg.App.Dir, cfg.Bitbucket.Workspace)
-
-		err := excel.ReportExcel(workspacePath, outputDir, devSheets)
+		err := excel.ReportExcel(dirpath, cfg)
 		if err != nil {
 			fmt.Printf("Error generating Excel report: %v\n", err)
 			os.Exit(1)
@@ -48,7 +40,7 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reportCmd.Flags().StringVarP(&dirDest, "dir-path", "p", "", "Directory where you want the report to be generated (optional)")
-	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report")
+	reportCmd.Flags().StringVarP(&dirpath, "dir-path", "p", "", "Folder path (default: DIR/BITBUCKET_WORKSPACE in .env)")
+	reportCmd.Flags().BoolVarP(&devSheets, "dev-sheets", "d", false, "Include developer sheets in the report (default: false)")
 	rootCmd.AddCommand(reportCmd)
 }
