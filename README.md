@@ -53,7 +53,7 @@ AWS_ACCESS_KEY_ID=your_aws_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret
 AWS_REGION=your_aws_region
 AWS_BUCKET_NAME=your_bucket_name
-AWS_UPLOAD_KEY=your_upload_prefix
+AWS_PATH=repositories # this is the path created in the bucket where the zip file will be uploaded
 
 # Logger Configuration
 LOG_LEVEL=debug
@@ -75,6 +75,8 @@ FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)D
 
 # Default clone directory
 DIR=../repositories
+# Default zip directory
+DEST_DIR=../zip
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
@@ -115,12 +117,30 @@ DIR=../repositories
 ```bash
 ./git-archive-s3 zip [flags]
   -p, --dir-path string   Path to repositories directory (required)
+  -d, --dest-path string  Destination path to save the zip files (optional)
 ```
 
 ### Upload to S3
 ```bash
 ./git-archive-s3 upload [flags]
-  -p, --dir-path string   Path to directory to upload (required)
+  -p, --dir-path string   Path to directory containing zip files or path to specific zip file (required)
+  -a, --all               Upload all zip files in the specified directory (optional)
+  -l, --last              Upload only the most recent zip file in the directory (optional)
+```
+
+#### Upload Examples:
+```bash
+# Upload a specific zip file
+./git-archive-s3 upload -p /path/to/repository.zip
+
+# Upload the most recent zip file from a directory 
+./git-archive-s3 upload -p /path/to/zip/folder -l
+
+# Upload all zip files from a directory
+./git-archive-s3 upload -p /path/to/zip/folder -a
+
+# When multiple zip files are found without specifying an option,
+# the tool will list available files and options
 ```
 
 ## Notes
@@ -129,3 +149,4 @@ DIR=../repositories
 - The DEVELOPERS_MAP feature allows you to map developer usernames to their full names in the report
 - When using --main-only (-m), only the main branch (main, master, or develop if neither exists) will be cloned
 - The report reflects the state of the cloned repositories, so if you clone with --main-only, the report will only show the main branches
+- The upload command will only upload zip files and provides options to handle multiple zip files

@@ -32,7 +32,7 @@ type AWSConfig struct {
 	SecretAccessKey string
 	Region          string
 	BucketName      string
-	UploadKey       string
+	AWSUploadPath   string
 }
 
 type LoggerConfig struct {
@@ -111,7 +111,7 @@ func Init() {
 	cfg.AWS.SecretAccessKey = viper.GetString("AWS_SECRET_ACCESS_KEY")
 	cfg.AWS.Region = viper.GetString("AWS_REGION")
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
-	cfg.AWS.UploadKey = viper.GetString("AWS_UPLOAD_KEY")
+	cfg.AWS.AWSUploadPath = viper.GetString("AWS_PATH")
 
 	// Filter empty values
 	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)
