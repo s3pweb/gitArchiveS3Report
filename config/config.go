@@ -46,6 +46,7 @@ type AppConfig struct {
 	TermsToSearch   []string
 	FilesToSearch   []string
 	DefaultCloneDir string
+	DestDir         string
 	MainBranchOnly  bool
 	ShallowClone    bool
 	DevSheets       bool
@@ -97,6 +98,7 @@ func Init() {
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
 	cfg.App.DefaultCloneDir = viper.GetString("DIR")
+	cfg.App.DestDir = viper.GetString("DEST_DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
 
 	// Bitbucket Configuration

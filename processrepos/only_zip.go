@@ -9,13 +9,12 @@ import (
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
 )
 
-func Onlyzip(parentDir string) error {
+func Onlyzip(parentDir, destPath string) error {
 	logger, err := logger.NewLogger("OnlyZip", "trace")
-	archiveDir := ("./archive")
 	if err != nil {
 		panic(err)
 	}
-	err = os.MkdirAll(archiveDir, os.ModePerm)
+	err = os.MkdirAll(destPath, os.ModePerm)
 	if err != nil {
 		logger.Error("error creating archive directory: %v", err)
 		return err
@@ -33,7 +32,7 @@ func Onlyzip(parentDir string) error {
 		if entry.IsDir() {
 			// Create the full path of the subfolder
 			dirPath := filepath.Join(parentDir, entry.Name())
-			zipFileName := filepath.Join(archiveDir, entry.Name()+".zip")
+			zipFileName := filepath.Join(destPath, entry.Name()+".zip")
 
 			// Create the ZIP file
 			zipFile, err := os.Create(zipFileName)
