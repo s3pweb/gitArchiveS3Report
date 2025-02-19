@@ -73,10 +73,10 @@ DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;
 TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
-# Default clone directory
+# Default clone directory (where the repositories will be cloned)
 DIR=../repositories
-# Default zip directory
-DEST_DIR=../zip
+# Default zip directory (where the zip files will be stored)
+DEST_DIR=../zipped
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
