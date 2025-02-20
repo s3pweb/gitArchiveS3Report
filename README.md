@@ -113,11 +113,13 @@ DEST_DIR=../zipped
   -d, --dev-sheets        Generate developer-specific sheets (optional)
 ```
 
-### Create ZIP Archive
+### Create ZIP Archive and Optionally Upload
 ```bash
 ./git-archive-s3 zip [flags]
   -p, --dir-path string       Path to source directory or file (required)
   -d, --dest-path string      Destination path to save the zip file (optional)
+  -u, --upload                Upload the created zip file to S3 (optional)
+  -r, --remove                Delete local zip file after successful upload (requires --upload)
 ```
 
 #### Zip Examples:
@@ -130,6 +132,12 @@ DEST_DIR=../zipped
 
 # Specify custom destination for the zip file
 ./git-archive-s3 zip -p /path/to/source -d /custom/zip/location
+
+# Create a zip archive and upload it to S3
+./git-archive-s3 zip -p /path/to/repositories -u
+
+# Create a zip archive, upload it to S3, and remove the local file
+./git-archive-s3 zip -p /path/to/repositories -u -r
 ```
 
 ### Upload to S3
@@ -153,29 +161,6 @@ DEST_DIR=../zipped
 
 # When multiple zip files are found without specifying an option,
 # the tool will list available files and options
-```
-
-### Zip and Upload Combined
-```bash
-./git-archive-s3 zipload [flags]
-  -p, --src-path string       Source path to zip (directory or file) (required)
-  -d, --dest-path string      Destination directory to save the zip file (optional)
-  -r, --delete                Delete local zip file after successful upload (optional)
-```
-
-#### Zip and Upload Examples:
-```bash
-# Zip a directory and upload the resulting zip file
-./git-archive-s3 zipload -p /path/to/repositories
-
-# Zip a file and upload the resulting zip file
-./git-archive-s3 zipload -p /path/to/specific/file.txt
-
-# Zip a directory, upload it, and delete the local zip file after successful upload
-./git-archive-s3 zipload -p /path/to/repositories -r
-
-# Specify custom destination path for the zip file
-./git-archive-s3 zipload -p /path/to/source -d /path/for/zip/file
 ```
 
 ## Notes
