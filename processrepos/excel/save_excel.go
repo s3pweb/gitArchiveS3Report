@@ -9,7 +9,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-func SaveExcelFile(f *excelize.File, workspacePath string, outputDir string, logger *logger.Logger) error {
+func SaveExcelFile(f *excelize.File, workspacePath, outputDir string, logger *logger.Logger) error {
 	workspace := filepath.Base(workspacePath)
 
 	// Format current time

@@ -31,7 +31,7 @@ var reportCmd = &cobra.Command{
 			dirpath = filepath.Join(cfg.App.DefaultCloneDir, cfg.Bitbucket.Workspace)
 		}
 
-		err := excel.ReportExcel(dirpath, cfg)
+		err := excel.ReportExcel(dirpath, cfg.App.DefaultCloneDir, devSheets)
 		if err != nil {
 			fmt.Printf("Error generating Excel report: %v\n", err)
 			os.Exit(1)
