@@ -15,25 +15,24 @@ var rootCmd = &cobra.Command{
         and backing up BitBucket repositories from Bitbucket.
         Use it to automate your BitBucket backups with simple commands.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Définir les styles de couleur
+		// Colors
 		titleColor := color.New(color.FgHiCyan, color.Bold)
 		cmdColor := color.New(color.FgCyan)
 		descColor := color.New(color.FgWhite)
 
-		// Afficher le titre
+		// Title
 		fmt.Println()
 		titleColor.Println("🚀 Welcome to Git Report Archive S3 Tool")
 		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		fmt.Println()
 
-		// Afficher les commandes disponibles
+		// Commands
 		displayCommand(cmdColor, descColor, "clone", "Clone Bitbucket repositories")
 		displayCommand(cmdColor, descColor, "report", "Generate Excel report for repositories")
-		displayCommand(cmdColor, descColor, "zip", "Create ZIP archives of repositories")
+		displayCommand(cmdColor, descColor, "zip", "Create ZIP archives and optionally upload to S3")
 		displayCommand(cmdColor, descColor, "upload", "Upload files to Amazon S3")
-		displayCommand(cmdColor, descColor, "zipload", "Create ZIP archive and upload to S3")
 
-		// Afficher l'aide
+		// Show help message
 		fmt.Println()
 		descColor.Println("Use './git-archive-s3 [command] --help' for more information about a command.")
 		fmt.Println()
