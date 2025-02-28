@@ -1,9 +1,8 @@
 package structs
 
-import (
-	"time"
-)
+import "time"
 
+// BranchInfo represents information about a branch
 type BranchInfo struct {
 	RepoName                string
 	BranchName              string
@@ -18,6 +17,7 @@ type BranchInfo struct {
 	FilesToSearch           map[string]bool
 	TermsToSearch           map[string]bool
 	Count                   string
+	SelectiveCount          string
 	IsShallow               bool
 	CloneDepth              int
 }
