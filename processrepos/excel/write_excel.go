@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -159,11 +160,31 @@ func countUniqueRepos(branchesInfo []structs.BranchInfo) int {
 }
 
 func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName string, col rune, branchInfo interface{}) error {
+	cfg := config.Get()
+
 	cellStyle, err := styles.CreateCellStyle(f)
 	if err != nil {
 		return err
 	}
 	falseStyle, err := styles.FalseCells(f)
+	if err != nil {
+		return err
+	}
+	trueStyle, err := styles.TrueCells(f)
+	if err != nil {
+		return err
+	}
+
+	// Create styles for count thresholds
+	lowCountStyle, err := styles.LowCountStyle(f)
+	if err != nil {
+		return err
+	}
+	mediumCountStyle, err := styles.MediumCountStyle(f)
+	if err != nil {
+		return err
+	}
+	highCountStyle, err := styles.HighCountStyle(f)
 	if err != nil {
 		return err
 	}
@@ -177,7 +198,7 @@ func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName strin
 		if val, exists := branchInfoTyped.FilesToSearch[fieldName]; exists {
 			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), strings.ToUpper(fmt.Sprintf("%v", val)))
 			if val {
-				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), trueStyle)
 			} else {
 				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
 			}
@@ -187,7 +208,7 @@ func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName strin
 		if val, exists := branchInfoTyped.TermsToSearch[fieldName]; exists {
 			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), strings.ToUpper(fmt.Sprintf("%v", val)))
 			if val {
-				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), cellStyle)
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), trueStyle)
 			} else {
 				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
 			}
@@ -200,14 +221,44 @@ func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName strin
 	cell := fmt.Sprintf("%c%d", col, row)
 	if fieldName == "LastCommitDate" {
 		f.SetCellValue(sheet, cell, fieldValue.Interface().(time.Time).Format("2006-01-02 15:04"))
+		f.SetCellStyle(sheet, cell, cell, cellStyle)
 	} else if fieldName == "LastDeveloperPercentage" || fieldName == "TopDeveloperPercentage" {
 		f.SetCellValue(sheet, cell, fmt.Sprintf("%.2f%%", fieldValue.Float()))
+		f.SetCellStyle(sheet, cell, cell, cellStyle)
+	} else if fieldName == "Count" || fieldName == "SelectiveCount" {
+		// For Count fields, apply conditional formatting based on percentage
+		countStr := fieldValue.String()
+		f.SetCellValue(sheet, cell, countStr)
+
+		// Parse the count to calculate percentage
+		parts := strings.Split(countStr, "/")
+		if len(parts) == 2 {
+			numerator, _ := strconv.Atoi(parts[0])
+			denominator, _ := strconv.Atoi(parts[1])
+
+			if denominator > 0 {
+				percentage := float64(numerator) / float64(denominator) * 100
+
+				// Apply the appropriate style based on thresholds
+				if percentage < float64(cfg.App.CountThresholdLow) {
+					f.SetCellStyle(sheet, cell, cell, lowCountStyle)
+				} else if percentage < float64(cfg.App.CountThresholdMedium) {
+					f.SetCellStyle(sheet, cell, cell, mediumCountStyle)
+				} else {
+					f.SetCellStyle(sheet, cell, cell, highCountStyle)
+				}
+			} else {
+				f.SetCellStyle(sheet, cell, cell, cellStyle)
+			}
+		} else {
+			f.SetCellStyle(sheet, cell, cell, cellStyle)
+		}
 	} else {
 		f.SetCellValue(sheet, cell, fieldValue.Interface())
+		f.SetCellStyle(sheet, cell, cell, cellStyle)
 	}
 
 	f.SetRowHeight(sheet, row, 30)
-	f.SetCellStyle(sheet, cell, cell, cellStyle)
 	return nil
 }
 

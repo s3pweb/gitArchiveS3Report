@@ -12,12 +12,11 @@ import (
 func SaveExcelFile(f *excelize.File, workspacePath, outputDir string, logger *logger.Logger) error {
 	workspace := filepath.Base(workspacePath)
 
-	// Format current time
 	currentTime := time.Now()
-	fileName := fmt.Sprintf("%s_report_%s_%s.xlsx",
-		workspace,
-		currentTime.Format("2006-01-02"),
-		currentTime.Format("15-04"))
+	dateStr := currentTime.Format("02-01-2006")
+	hourStr := currentTime.Format("15h04")
+
+	fileName := fmt.Sprintf("%s_report_%s_%s.xlsx", workspace, dateStr, hourStr)
 
 	excelFileName := filepath.Join(outputDir, fileName)
 	if err := f.SaveAs(excelFileName); err != nil {

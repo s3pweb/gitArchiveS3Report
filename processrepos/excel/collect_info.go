@@ -183,6 +183,20 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 		trueCount := trueCountFiles + trueCountTerms
 		count := fmt.Sprintf("%d/%d", trueCount, totalSearchItems)
 
+		selectiveCountMap := make(map[string]bool)
+		for _, item := range cfg.App.TermsFilesToCount {
+			if val, exists := filesToSearchMap[item]; exists {
+				selectiveCountMap[item] = val
+			}
+			if val, exists := termsToSearchMap[item]; exists {
+				selectiveCountMap[item] = val
+			}
+		}
+
+		selectiveTrueCount := countTrueInMap(selectiveCountMap)
+		selectiveTotalCount := len(selectiveCountMap)
+		selectiveCount := fmt.Sprintf("%d/%d", selectiveTrueCount, selectiveTotalCount)
+
 		infos = append(infos, structs.BranchInfo{
 			RepoName:                filepath.Base(path),
 			BranchName:              branchName,
@@ -196,6 +210,7 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			TopDeveloperPercentage:  topDeveloperPercentage,
 			FilesToSearch:           filesToSearchMap,
 			TermsToSearch:           termsToSearchMap,
+			SelectiveCount:          selectiveCount,
 			Count:                   count,
 			IsShallow:               isShallow,
 			CloneDepth:              cloneDepth,
@@ -220,7 +235,11 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 	startTime := time.Now()
 	logWithTime := func(format string, args ...interface{}) {
 		elapsed := time.Since(startTime).Round(time.Millisecond)
-		logger.Info("[%s] %s", elapsed, fmt.Sprintf(format, args...))
+		if strings.Contains(format, "detected") || strings.Contains(format, "Error") || strings.Contains(format, "empty") {
+			logger.Warn("[%s] %s", elapsed, fmt.Sprintf(format, args...))
+		} else {
+			logger.Info("[%s] %s", elapsed, fmt.Sprintf(format, args...))
+		}
 	}
 
 	cfg := config.Get()
@@ -263,7 +282,7 @@ func CollectBranchInfo(basePath string, logger *logger.Logger, totalRepos int) (
 					emptyRepoChan <- oneFolder.Name()
 					mutex.Lock()
 					processedRepos++
-					logWithTime("Empty repository detected: %s", oneFolder.Name())
+					logWithTime("empty repository detected: %s", oneFolder.Name())
 					mutex.Unlock()
 					return
 				}
@@ -315,7 +334,6 @@ waitLoop:
 
 	logWithTime("Starting post-processing phase...")
 
-	logWithTime("Processing empty repositories...")
 	close(emptyRepoChan)
 	for repoName := range emptyRepoChan {
 		emptyRepos = append(emptyRepos, repoName)
@@ -325,7 +343,7 @@ waitLoop:
 		sort.Strings(emptyRepos)
 		logWithTime("Found %d empty repositories:", len(emptyRepos))
 		for _, repoName := range emptyRepos {
-			logWithTime("- %s", repoName)
+			logger.Warn("Empty repository: %s", repoName)
 		}
 	}
 
@@ -345,11 +363,9 @@ waitLoop:
 	if len(errors) > 0 {
 		logWithTime("%d repositories had errors during processing", len(errors))
 		for _, err := range errors {
-			logWithTime("Repository processing error: %v", err)
+			logger.Warn("Repository processing error: %v", err)
 		}
 	}
-
-	logWithTime("Post-processing phase completed")
 
 	return branchesInfo, processedRepos, nil
 }

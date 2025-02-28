@@ -40,16 +40,19 @@ type LoggerConfig struct {
 }
 
 type AppConfig struct {
-	CPU             int
-	DevelopersMap   string
-	DefaultColumns  []string
-	TermsToSearch   []string
-	FilesToSearch   []string
-	DefaultCloneDir string
-	DestDir         string
-	MainBranchOnly  bool
-	ShallowClone    bool
-	DevSheets       bool
+	CPU                  int
+	DevelopersMap        string
+	DefaultColumns       []string
+	TermsToSearch        []string
+	FilesToSearch        []string
+	TermsFilesToCount    []string
+	DefaultCloneDir      string
+	DestDir              string
+	MainBranchOnly       bool
+	ShallowClone         bool
+	DevSheets            bool
+	CountThresholdLow    int
+	CountThresholdMedium int
 }
 
 // Init initializes the configuration
@@ -84,6 +87,8 @@ func Init() {
 	// Set default values
 	viper.SetDefault("app.cpu", 1)
 	viper.SetDefault("app.cloneDir", "./repositories")
+	viper.SetDefault("app.countThresholdLow", 30)
+	viper.SetDefault("app.countThresholdMedium", 60)
 
 	// Load config into struct
 	cfg = &Config{}
@@ -97,9 +102,14 @@ func Init() {
 	cfg.App.DefaultColumns = strings.Split(viper.GetString("DEFAULT_COLUMN"), ";")
 	cfg.App.TermsToSearch = strings.Split(viper.GetString("TERMS_TO_SEARCH"), ";")
 	cfg.App.FilesToSearch = strings.Split(viper.GetString("FILES_TO_SEARCH"), ";")
+	cfg.App.TermsFilesToCount = strings.Split(viper.GetString("TERMS_FILES_TO_COUNT"), ";")
 	cfg.App.DefaultCloneDir = viper.GetString("DIR")
 	cfg.App.DestDir = viper.GetString("DEST_DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
+
+	// Count thresholds
+	cfg.App.CountThresholdLow = viper.GetInt("COUNT_THRESHOLD_LOW")
+	cfg.App.CountThresholdMedium = viper.GetInt("COUNT_THRESHOLD_MEDIUM")
 
 	// Bitbucket Configuration
 	cfg.Bitbucket.Token = viper.GetString("BITBUCKET_TOKEN")
@@ -117,7 +127,7 @@ func Init() {
 	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)
 	cfg.App.TermsToSearch = utils.FilterEmpty(cfg.App.TermsToSearch)
 	cfg.App.FilesToSearch = utils.FilterEmpty(cfg.App.FilesToSearch)
-
+	cfg.App.TermsFilesToCount = utils.FilterEmpty(cfg.App.TermsFilesToCount)
 }
 
 // Get returns the configuration instance

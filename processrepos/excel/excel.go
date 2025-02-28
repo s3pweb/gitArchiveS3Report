@@ -89,7 +89,14 @@ func ReportExcel(basePath, dirDest string, devSheets bool) error {
 	duration := time.Since(startTime).Round(time.Second)
 	logger.Info("Report generation completed in %s", duration)
 	logger.Info("Total repositories found: %d", totalRepos)
-	logger.Info("Repositories successfully processed: %d/%d", processedReposCount, totalRepos)
+
+	if processedRepos < totalRepos {
+		logger.Warn("Repositories successfully processed: %d/%d", processedReposCount, totalRepos)
+		logger.Warn("Some repositories could not be processed. Check logs for details.")
+	} else {
+		logger.Success("Repositories successfully processed: %d/%d", processedReposCount, totalRepos)
+	}
+
 	logger.Info("Total branches analyzed: %d", len(branchesInfo))
 	return nil
 }
