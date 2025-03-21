@@ -13,7 +13,7 @@ func SaveExcelFile(f *excelize.File, workspacePath, outputDir string, logger *lo
 	workspace := filepath.Base(workspacePath)
 
 	currentTime := time.Now()
-	dateStr := currentTime.Format("02-01-2006")
+	dateStr := currentTime.Format("2006-01-02")
 	hourStr := currentTime.Format("15h04")
 
 	fileName := fmt.Sprintf("%s_report_%s_%s.xlsx", workspace, dateStr, hourStr)

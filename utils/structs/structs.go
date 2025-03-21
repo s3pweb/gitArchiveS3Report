@@ -16,8 +16,10 @@ type BranchInfo struct {
 	TopDeveloperPercentage  float64
 	FilesToSearch           map[string]bool
 	TermsToSearch           map[string]bool
+	ForbiddenFiles          map[string]bool
 	Count                   string
 	SelectiveCount          string
+	ForbiddenCount          string
 	IsShallow               bool
 	CloneDepth              int
 }
