@@ -53,6 +53,7 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 	columns := cfg.App.DefaultColumns
 	columns = append(columns, cfg.App.FilesToSearch...)
 	columns = append(columns, cfg.App.TermsToSearch...)
+	columns = append(columns, cfg.App.ForbiddenFiles...)
 
 	sortBranchesByLastCommit(branchesInfo)
 	nbrcolumn := 'A'
@@ -62,12 +63,19 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 	fileTotals := make(map[string]int)
 	repoCount := countUniqueRepos(branchesInfo)
 
+	// Create maps to store totals for forbidden files
+	forbiddenFileTotals := make(map[string]int)
+
 	// Initialize maps for terms and files
 	for _, term := range cfg.App.TermsToSearch {
 		termTotals[term] = 0
 	}
 	for _, file := range cfg.App.FilesToSearch {
 		fileTotals[file] = 0
+	}
+	// Initialize map for forbidden files
+	for _, file := range cfg.App.ForbiddenFiles {
+		forbiddenFileTotals[file] = 0
 	}
 
 	// Write column headers and data
@@ -110,6 +118,29 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 				}
 				cellStyle, _ := styles.CreateCellStyle(f)
 				f.SetCellStyle(sheet, cell, cell, cellStyle)
+			} else if column == "ForbiddenFiles" {
+				trueCount := 0
+				denominator := len(cfg.App.ForbiddenFiles)
+
+				// Count forbidden files
+				for _, file := range cfg.App.ForbiddenFiles {
+					if val, exists := branchInfo.FilesToSearch[file]; exists && val {
+						trueCount++
+					}
+				}
+
+				// Write count of forbidden files
+				cell := fmt.Sprintf("%c%d", nbrcolumn, row)
+				if denominator == 0 {
+					f.SetCellValue(sheet, cell, "0/0")
+				} else {
+					f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d", trueCount, denominator))
+				}
+
+				// apply style based on count
+				cellStyle, _ := styles.CreateCellStyle(f)
+				f.SetCellStyle(sheet, cell, cell, cellStyle)
+
 			} else {
 				err := writeFieldToColumn(f, sheet, row, column, nbrcolumn, branchInfo)
 				if err != nil {
@@ -123,6 +154,9 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 			}
 			if val, exists := branchInfo.FilesToSearch[column]; exists && val {
 				fileTotals[column]++
+			}
+			if val, exists := branchInfo.ForbiddenFiles[column]; exists && val {
+				forbiddenFileTotals[column]++
 			}
 			row++
 		}
@@ -142,6 +176,10 @@ func writeDataToSheet(f *excelize.File, sheet string, branchesInfo []structs.Bra
 			f.SetCellStyle(sheet, cell, cell, cellStyle)
 		} else if nbrcolumn == 'H' {
 			f.SetCellValue(sheet, cell, "TOTAL")
+			f.SetCellStyle(sheet, cell, cell, cellStyle)
+		} else if forbiddenFileTotals[column] > 0 {
+			percentage := float64(forbiddenFileTotals[column]) / float64(repoCount) * 100
+			f.SetCellValue(sheet, cell, fmt.Sprintf("%d/%d (%.1f%%)", forbiddenFileTotals[column], repoCount, percentage))
 			f.SetCellStyle(sheet, cell, cell, cellStyle)
 		}
 
@@ -211,6 +249,18 @@ func writeFieldToColumn(f *excelize.File, sheet string, row int, fieldName strin
 				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), trueStyle)
 			} else {
 				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
+			}
+			f.SetRowHeight(sheet, row, 30)
+			return nil
+		}
+		if val, exists := branchInfoTyped.ForbiddenFiles[fieldName]; exists {
+			f.SetCellValue(sheet, fmt.Sprintf("%c%d", col, row), strings.ToUpper(fmt.Sprintf("%v", val)))
+
+			// For forbidden files, we invert the color logic - true is bad (red), false is good (green)
+			if val {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), falseStyle)
+			} else {
+				f.SetCellStyle(sheet, fmt.Sprintf("%c%d", col, row), fmt.Sprintf("%c%d", col, row), trueStyle)
 			}
 			f.SetRowHeight(sheet, row, 30)
 			return nil

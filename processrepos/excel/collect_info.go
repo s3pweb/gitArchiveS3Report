@@ -177,6 +177,15 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			termsToSearchMap[term] = searchInFiles(path, term)
 		}
 
+		forbiddenFilesMap := make(map[string]bool)
+		for _, file := range cfg.App.ForbiddenFiles {
+			forbiddenFilesMap[file] = fileExistsIgnoreCase(path, file)
+		}
+
+		trueForbiddenCount := countTrueInMap(forbiddenFilesMap)
+		totalForbiddenItems := len(forbiddenFilesMap)
+		forbiddenCount := fmt.Sprintf("%d/%d", trueForbiddenCount, totalForbiddenItems)
+
 		trueCountFiles := countTrueInMap(filesToSearchMap)
 		trueCountTerms := countTrueInMap(termsToSearchMap)
 		totalSearchItems := len(filesToSearchMap) + len(termsToSearchMap)
@@ -210,8 +219,10 @@ func CollectBranchInfoForOneRepo(logger *logger.Logger, branchesInfo []structs.B
 			TopDeveloperPercentage:  topDeveloperPercentage,
 			FilesToSearch:           filesToSearchMap,
 			TermsToSearch:           termsToSearchMap,
+			ForbiddenFiles:          forbiddenFilesMap,
 			SelectiveCount:          selectiveCount,
 			Count:                   count,
+			ForbiddenCount:          forbiddenCount,
 			IsShallow:               isShallow,
 			CloneDepth:              cloneDepth,
 		})

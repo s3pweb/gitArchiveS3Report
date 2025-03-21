@@ -45,6 +45,7 @@ type AppConfig struct {
 	DefaultColumns       []string
 	TermsToSearch        []string
 	FilesToSearch        []string
+	ForbiddenFiles       []string
 	TermsFilesToCount    []string
 	DefaultCloneDir      string
 	DestDir              string
@@ -53,6 +54,8 @@ type AppConfig struct {
 	DevSheets            bool
 	CountThresholdLow    int
 	CountThresholdMedium int
+	JiraBaseURL          string
+	JiraParentTicket     string
 }
 
 // Init initializes the configuration
@@ -106,6 +109,7 @@ func Init() {
 	cfg.App.DefaultCloneDir = viper.GetString("DIR")
 	cfg.App.DestDir = viper.GetString("DEST_DIR")
 	cfg.App.DevelopersMap = viper.GetString("DEVELOPERS_MAP")
+	cfg.App.ForbiddenFiles = strings.Split(viper.GetString("FORBIDDEN_FILES_TO_SEARCH"), ";")
 
 	// Count thresholds
 	cfg.App.CountThresholdLow = viper.GetInt("COUNT_THRESHOLD_LOW")
@@ -123,11 +127,16 @@ func Init() {
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
 	cfg.AWS.AWSUploadPath = viper.GetString("AWS_PATH")
 
+	// Jira Configuration
+	cfg.App.JiraBaseURL = viper.GetString("JIRA_BASE_URL")
+	cfg.App.JiraParentTicket = viper.GetString("JIRA_PARENT_TICKET")
+
 	// Filter empty values
 	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)
 	cfg.App.TermsToSearch = utils.FilterEmpty(cfg.App.TermsToSearch)
 	cfg.App.FilesToSearch = utils.FilterEmpty(cfg.App.FilesToSearch)
 	cfg.App.TermsFilesToCount = utils.FilterEmpty(cfg.App.TermsFilesToCount)
+	cfg.App.ForbiddenFiles = utils.FilterEmpty(cfg.App.ForbiddenFiles)
 }
 
 // Get returns the configuration instance
