@@ -35,13 +35,7 @@ which ghorg
 
 ### Configuration
 
-1. Create and configure the `.env` file:
-```bash
-# Copy example file
-cp example.env .env
-```
-
-2. Edit the `.env` file with your settings:
+#### Edit the `.env` file with your settings:
 ```bash
 # Bitbucket Configuration
 BITBUCKET_TOKEN=your_token
@@ -74,6 +68,9 @@ TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
 # Terms and files to be counted separately (subset of the search terms and files)
+TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;vault
+
+# Terms and files to be counted separately (subset of the search terms and files)
 # These items will be used for the SelectiveCount calculation
 TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;vault
 
@@ -82,10 +79,15 @@ TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;
 COUNT_THRESHOLD_LOW=30    # Below this percentage will be red
 COUNT_THRESHOLD_MEDIUM=60 # Below this percentage will be orange, above will be green
 
+# Count thresholds (percentage values)
+COUNT_THRESHOLD_LOW=30    # Below this percentage will be red
+COUNT_THRESHOLD_MEDIUM=60 # Below this percentage will be orange, above will be green
+
 # Default clone directory (where the repositories will be cloned)
 DIR=../repositories
 # Default zip directory (where the zip files will be stored)
 DEST_DIR=../zipped
+```
 
 ## Explanation of FILES_TO_SEARCH regex patterns:
 - `(?i)`: Case-insensitive matching
@@ -98,7 +100,6 @@ DEST_DIR=../zipped
 - `(?i)docker-compose(-\w+)?\.yaml$`
   - Matches: `docker-compose.yaml`, `docker-compose-test.yaml`
   - Does not match: `docker-compose.yaml.backup`
-```
 
 ## Usage
 
