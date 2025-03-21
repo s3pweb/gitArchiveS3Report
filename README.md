@@ -67,11 +67,20 @@ CPU=1
 DEVELOPERS_MAP=john=John Doe;jane=Jane Smith
 
 # Default columns for the Excel report
-DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage
+DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage;SelectiveCount;Count
 
 # Search terms and files for analysis
 TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
+
+# Terms and files to be counted separately (subset of the search terms and files)
+# These items will be used for the SelectiveCount calculation
+TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;vault
+
+# Count thresholds (percentage values)
+# These thresholds determine the color-coding in the report:
+COUNT_THRESHOLD_LOW=30    # Below this percentage will be red
+COUNT_THRESHOLD_MEDIUM=60 # Below this percentage will be orange, above will be green
 
 # Default clone directory (where the repositories will be cloned)
 DIR=../repositories
