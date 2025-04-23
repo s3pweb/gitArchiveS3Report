@@ -61,23 +61,17 @@ CPU=1
 DEVELOPERS_MAP=john=John Doe;jane=Jane Smith
 
 # Default columns for the Excel report
-DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage;SelectiveCount;Count
+DEFAULT_COLUMN=RepoName;BranchName;LastCommitDate;TimeSinceLastCommit;Commitnbr;HostLine;LastDeveloper;LastDeveloperPercentage;SelectiveCount;Count;ForbiddenCount
 
 # Search terms and files for analysis
 TERMS_TO_SEARCH=vault;swagger
 FILES_TO_SEARCH=(?i)sonar-project.properties$;(?i)bitbucket-pipelines.yml$;(?i)Dockerfile$;(?i)docker-compose(-\w+)?\.yaml$
 
-# Terms and files to be counted separately (subset of the search terms and files)
-TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;vault
+# Files that should NOT be present in the repository
+FORBIDDEN_FILES_TO_SEARCH=(?i)\.npmrc$;(?i)\.env$;(?i)password\.txt$;(?i)credentials\.(json|txt|yaml)$;(?i)secret\.(key|txt|json)$;(?i)private\.key$;(?i)api_token\.txt$
 
 # Terms and files to be counted separately (subset of the search terms and files)
-# These items will be used for the SelectiveCount calculation
 TERMS_FILES_TO_COUNT=(?i)bitbucket-pipelines.yml$;(?i)sonar-project.properties$;vault
-
-# Count thresholds (percentage values)
-# These thresholds determine the color-coding in the report:
-COUNT_THRESHOLD_LOW=30    # Below this percentage will be red
-COUNT_THRESHOLD_MEDIUM=60 # Below this percentage will be orange, above will be green
 
 # Count thresholds (percentage values)
 COUNT_THRESHOLD_LOW=30    # Below this percentage will be red
@@ -87,19 +81,26 @@ COUNT_THRESHOLD_MEDIUM=60 # Below this percentage will be orange, above will be 
 DIR=../repositories
 # Default zip directory (where the zip files will be stored)
 DEST_DIR=../zipped
+
+# JIRA Task Creation Configuration
+JIRA_BASE_URL=https://example.atlassian.net
+JIRA_TASK_ENABLED=true
+JIRA_PARENT_TASK=S3DEVAGR-2180
+JIRA_PROJECT_KEY=S3DEVAGR
+JIRA_ISSUE_TYPE=Sous-tâche
+JIRA_USERNAME=your_username
+JIRA_API_TOKEN=your_token
+JIRA_TITLE_TEMPLATE=Amélioration de la CI/CD pour le projet {{.RepoName}}
+JIRA_DESC_TEMPLATE={{.MissingElements}}
+# Documentation links format: Display Text|URL (separated by semicolons)
+JIRA_DOC_LINKS=Title 1|https://example.atlassian.net/wiki/spaces/DEV/pages/123/CI+CD+Introduction;Title 2|https://example.atlassian.net/wiki/spaces/DEV/pages/456/External+Projects
 ```
 
-## Explanation of FILES_TO_SEARCH regex patterns:
-- `(?i)`: Case-insensitive matching
-- `$`: End of the string
+The `JIRA_DOC_LINKS` field supports two formats:
+- Simple URLs: `https://example.com/page1;https://example.com/page2`
+- Custom display text: `Display Text|https://example.com;Another Text|https://example.com`
 
-### Examples
-- `(?i)sonar-project.properties$`
-  - Matches: `sonar-project.properties`, `Sonar-Project.Properties`
-  - Does not match: `sonar-project.properties.txt`, `my-sonar-project.properties`
-- `(?i)docker-compose(-\w+)?\.yaml$`
-  - Matches: `docker-compose.yaml`, `docker-compose-test.yaml`
-  - Does not match: `docker-compose.yaml.backup`
+When using custom display text, the format is `Display Text|URL`, with multiple links separated by semicolons.
 
 ## Usage
 
@@ -172,6 +173,36 @@ DEST_DIR=../zipped
 # When multiple zip files are found without specifying an option,
 # the tool will list available files and options
 ```
+
+### Forbidden Files Detection
+The tool checks for files that should NOT be present in repositories (like .npmrc files containing tokens). Configure the list in the .env file:
+```
+FORBIDDEN_FILES_TO_SEARCH=(?i)\.npmrc$;(?i)\.env$;(?i)password.txt$
+```
+
+### JIRA Task Creation
+The Excel report includes a "Create JIRA Task" button for each repository row that has missing elements. Clicking this button will create a JIRA task with customizable title and description.
+
+The templates support the following variables:
+- `{{.RepoName}}`: Repository name
+- `{{.BranchName}}`: Branch name
+- `{{.TopDeveloper}}`: Top contributor to the repository
+- `{{.LastDeveloper}}`: Last developer who committed
+- `{{.MissingElements}}`: List of missing elements (formatted as bullet points)
+- `{{.ParentTask}}`: Parent JIRA task reference
+
+#### Why a Local Server is Required
+To use JIRA task creation from Excel files, you need to start a local server:
+```bash
+./git-archive-s3 serve
+```
+
+This local server is necessary because:
+- Excel cannot make authenticated API calls directly to JIRA
+- For security reasons, API credentials should not be stored in Excel files
+- The local server acts as a secure bridge: it receives requests from Excel, retrieves credentials from your `.env` file, and makes authorized API calls to JIRA
+
+The server runs locally on port 8081 by default (configurable with the `-p` flag).
 
 ## Notes
 - Environment variables can be used to override any setting from the `.env` file

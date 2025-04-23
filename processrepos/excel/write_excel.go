@@ -13,8 +13,8 @@ import (
 	"unicode"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
+	styles "github.com/s3pweb/gitArchiveS3Report/utils/excel"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
-	"github.com/s3pweb/gitArchiveS3Report/utils/styles"
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/text/unicode/norm"
 )
@@ -33,6 +33,20 @@ func WriteBranchInfoToExcel(f *excelize.File, allBranches, mainBranches, develop
 		return err
 	}
 	err = writeDataToSheet(f, developBranchesSheet, developBranches)
+	if err != nil {
+		return err
+	}
+
+	// Add JIRA buttons to each sheet
+	err = styles.AddJiraButtons(f, allBranchesSheet, allBranches)
+	if err != nil {
+		return err
+	}
+	err = styles.AddJiraButtons(f, mainBranchesSheet, mainBranches)
+	if err != nil {
+		return err
+	}
+	err = styles.AddJiraButtons(f, developBranchesSheet, developBranches)
 	if err != nil {
 		return err
 	}
