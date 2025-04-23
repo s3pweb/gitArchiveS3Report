@@ -55,7 +55,15 @@ type AppConfig struct {
 	CountThresholdLow    int
 	CountThresholdMedium int
 	JiraBaseURL          string
-	JiraParentTicket     string
+	JiraTaskEnabled      bool
+	JiraParentTask       string
+	JiraTitleTemplate    string
+	JiraDescTemplate     string
+	JiraDocLinks         []string
+	JiraProjectKey       string
+	JiraIssueType        string
+	JiraUsername         string
+	JiraAPIToken         string
 }
 
 // Init initializes the configuration
@@ -127,9 +135,25 @@ func Init() {
 	cfg.AWS.BucketName = viper.GetString("AWS_BUCKET_NAME")
 	cfg.AWS.AWSUploadPath = viper.GetString("AWS_PATH")
 
-	// Jira Configuration
+	// JIRA configuration
 	cfg.App.JiraBaseURL = viper.GetString("JIRA_BASE_URL")
-	cfg.App.JiraParentTicket = viper.GetString("JIRA_PARENT_TICKET")
+	cfg.App.JiraTaskEnabled = viper.GetBool("JIRA_TASK_ENABLED")
+	cfg.App.JiraParentTask = viper.GetString("JIRA_PARENT_TASK")
+	cfg.App.JiraTitleTemplate = viper.GetString("JIRA_TITLE_TEMPLATE")
+	cfg.App.JiraDescTemplate = viper.GetString("JIRA_DESC_TEMPLATE")
+	cfg.App.JiraDocLinks = strings.Split(viper.GetString("JIRA_DOC_LINKS"), ";")
+	cfg.App.JiraDocLinks = utils.FilterEmpty(cfg.App.JiraDocLinks)
+	cfg.App.JiraProjectKey = viper.GetString("JIRA_PROJECT_KEY")
+	cfg.App.JiraIssueType = viper.GetString("JIRA_ISSUE_TYPE")
+	cfg.App.JiraUsername = viper.GetString("JIRA_USERNAME")
+	cfg.App.JiraAPIToken = viper.GetString("JIRA_API_TOKEN")
+	// Set default values for JIRA templates if not provided
+	if cfg.App.JiraTitleTemplate == "" {
+		cfg.App.JiraTitleTemplate = "Amélioration de la CI/CD pour le projet {{.RepoName}}"
+	}
+	if cfg.App.JiraDescTemplate == "" {
+		cfg.App.JiraDescTemplate = "Ajouter les éléments suivants dans le projet :\n{{.MissingElements}}\n\nJIRA parente: {{.ParentTask}}\nAssigné: {{.TopDeveloper}}"
+	}
 
 	// Filter empty values
 	cfg.App.DefaultColumns = utils.FilterEmpty(cfg.App.DefaultColumns)

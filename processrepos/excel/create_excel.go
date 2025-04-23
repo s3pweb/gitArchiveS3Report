@@ -3,8 +3,8 @@ package excel
 import (
 	"fmt"
 
+	styles "github.com/s3pweb/gitArchiveS3Report/utils/excel"
 	"github.com/s3pweb/gitArchiveS3Report/utils/structs"
-	"github.com/s3pweb/gitArchiveS3Report/utils/styles"
 	"github.com/xuri/excelize/v2"
 )
 
