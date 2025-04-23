@@ -32,7 +32,7 @@ func Onlyzip(sourcePath, destPath string) error {
 		return err
 	}
 
-	// Get current timestamp for the filename (french format)
+	// Get current timestamp for the filename
 	timestamp := time.Now().Format("2006-01-02_15h04") // YYYY-MM-DD_HHMM
 
 	// Get a meaningful name for the zip file
