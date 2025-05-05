@@ -183,6 +183,13 @@ FORBIDDEN_FILES_TO_SEARCH=(?i)\.npmrc$;(?i)\.env$;(?i)password.txt$
 ### JIRA Task Creation
 The Excel report includes a "Create JIRA Task" button for each repository row that has missing elements. Clicking this button will create a JIRA task with customizable title and description.
 
+Before using this feature, ensure that you have launched the local server:
+```bash
+./git-archive-s3 serve
+```
+The server runs locally on port 8081 by default (configurable with the `-p` flag).
+The server will handle the request and create the task in JIRA.
+
 The templates support the following variables:
 - `{{.RepoName}}`: Repository name
 - `{{.BranchName}}`: Branch name
@@ -192,17 +199,11 @@ The templates support the following variables:
 - `{{.ParentTask}}`: Parent JIRA task reference
 
 #### Why a Local Server is Required
-To use JIRA task creation from Excel files, you need to start a local server:
-```bash
-./git-archive-s3 serve
-```
 
 This local server is necessary because:
 - Excel cannot make authenticated API calls directly to JIRA
 - For security reasons, API credentials should not be stored in Excel files
 - The local server acts as a secure bridge: it receives requests from Excel, retrieves credentials from your `.env` file, and makes authorized API calls to JIRA
-
-The server runs locally on port 8081 by default (configurable with the `-p` flag).
 
 ## Notes
 - Environment variables can be used to override any setting from the `.env` file
