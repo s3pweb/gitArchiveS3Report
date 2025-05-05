@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/s3pweb/gitArchiveS3Report/utils/logger"
@@ -33,7 +34,7 @@ func Onlyzip(sourcePath, destPath string) error {
 	}
 
 	// Get current timestamp for the filename
-	timestamp := time.Now().Format("2006-01-02_15h04") // YYYY-MM-DD_HHMM
+	timestamp := strings.ReplaceAll(time.Now().Format(time.RFC3339), ":", "")
 
 	// Get a meaningful name for the zip file
 	var zipName string
