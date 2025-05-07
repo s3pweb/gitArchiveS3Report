@@ -107,9 +107,15 @@ func AddJiraButtons(f *excelize.File, sheet string, branchesInfo []structs.Branc
 		var elementsToAdd []string
 		var filesToRemove []string
 
+		// Create a map to check if an item is in TERMS_FILES_TO_COUNT
+		termsFilesToCountMap := make(map[string]bool)
+		for _, item := range cfg.App.TermsFilesToCount {
+			termsFilesToCountMap[item] = true
+		}
+
 		// Check missing required files
 		for file, exists := range branchInfo.FilesToSearch {
-			if !exists {
+			if !exists && termsFilesToCountMap[file] {
 				cleanFile := cleanRegexPattern(file)
 				elementsToAdd = append(elementsToAdd, cleanFile)
 			}
@@ -117,7 +123,7 @@ func AddJiraButtons(f *excelize.File, sheet string, branchesInfo []structs.Branc
 
 		// Check missing required terms
 		for term, exists := range branchInfo.TermsToSearch {
-			if !exists {
+			if !exists && termsFilesToCountMap[term] {
 				cleanTerm := cleanRegexPattern(term)
 				elementsToAdd = append(elementsToAdd, cleanTerm)
 			}
