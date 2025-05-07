@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/s3pweb/gitArchiveS3Report/config"
@@ -98,23 +99,23 @@ func handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 		Parent      string `json:"parent"`
 	}
 
+	var err error
 	// Process POST or JSON parameters
-	if r.Method == http.MethodGet {
-		requestData.Title = r.URL.Query().Get("title")
-		requestData.Description = r.URL.Query().Get("description")
-		requestData.Assignee = r.URL.Query().Get("assignee")
-		requestData.Parent = r.URL.Query().Get("parent")
-	} else {
-		// For POST requests, process form or JSON parameters
-		err := json.NewDecoder(r.Body).Decode(&requestData)
+	paramMap := map[string]*string{
+		"title":       &requestData.Title,
+		"description": &requestData.Description,
+		"assignee":    &requestData.Assignee,
+		"parent":      &requestData.Parent,
+	}
+
+	for key, value := range paramMap {
+		rawValue := r.URL.Query().Get(key)
+		decodedValue, err := url.QueryUnescape(rawValue)
 		if err != nil {
-			// If not JSON, try reading form parameters
-			r.ParseForm()
-			requestData.Title = r.FormValue("title")
-			requestData.Description = r.FormValue("description")
-			requestData.Assignee = r.FormValue("assignee")
-			requestData.Parent = r.FormValue("parent")
+			http.Error(w, fmt.Sprintf("Error decoding parameter %s: %v", key, err), http.StatusBadRequest)
+			return
 		}
+		*value = decodedValue
 	}
 
 	// Check required parameters
